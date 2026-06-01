@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+frontend/node_modules/
+
+# Base de datos (se regenera con npm run seed)
+inventory.db
+
+# Archivos temporales
+*.log
+.env
+.DS_Store
+Thumbs.db
+
+# Build del frontend
+frontend/dist/
+
+# Archivos de debug
+fix_*.js
+get_models.js
+update_ti.js
+comparar.js
+generate_seed_new.ps1
+seed_data_new.json
