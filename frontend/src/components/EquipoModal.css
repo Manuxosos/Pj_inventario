@@ -1,13 +1,13 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  background: rgba(2, 6, 14, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 24px;
-  backdrop-filter: blur(2px);
+  backdrop-filter: blur(4px);
 }
 
 .modal-box {
@@ -18,7 +18,8 @@
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  border: 1px solid rgba(0,245,255,0.2);
+  box-shadow: 0 0 40px rgba(0,245,255,0.1), 0 20px 60px rgba(0,0,0,0.5);
 }
 
 .modal-header {
@@ -53,14 +54,15 @@
 
 .form-section {}
 .section-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--primary);
+  letter-spacing: 0.1em;
+  color: var(--neon-cyan);
   margin-bottom: 12px;
   padding-bottom: 6px;
-  border-bottom: 2px solid var(--section-title-bg);
+  border-bottom: 1px solid var(--border);
+  text-shadow: 0 0 10px rgba(0,245,255,0.4);
 }
 
 .form-grid {
