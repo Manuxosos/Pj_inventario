@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Download, PlusCircle, Sun, Moon, Monitor, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Download, PlusCircle, Monitor, LogOut } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
@@ -11,12 +11,10 @@ export default function App() {
   const [tab, setTab] = useState('dashboard');
   const [modal, setModal] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
+    document.documentElement.setAttribute('data-theme', 'dark');
+  }, []);
 
   if (!autenticado) return <Login onLogin={() => setAutenticado(true)} />;
 
@@ -24,8 +22,6 @@ export default function App() {
     localStorage.removeItem('token');
     setAutenticado(false);
   };
-
-  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
 
   const handleExportar = async () => {
     const res = await fetch('http://localhost:3001/api/exportar');
@@ -72,10 +68,7 @@ export default function App() {
           </nav>
 
           <div className="header-actions">
-            <button className="theme-toggle" onClick={toggleTheme} title="Cambiar tema">
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-            <button className="theme-toggle" onClick={handleLogout} title="Cerrar sesión">
+            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión">
               <LogOut size={16} />
             </button>
             {tab === 'inventario' && (
