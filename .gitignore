@@ -14,6 +14,9 @@ Thumbs.db
 # Build del frontend
 frontend/dist/
 
+# Configuración local de herramientas
+.claude/
+
 # Archivos de debug
 fix_*.js
 get_models.js
