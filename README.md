@@ -1,12 +1,13 @@
 # 🖥️ Inventario IT — Edificio Principal
 
-Sistema de gestión de inventario de equipos IT. Dashboard con gráficas, tabla filtrable, exportación a Excel y login seguro.
+Sistema de gestión de inventario de equipos IT. Dashboard con gráficas, tabla filtrable, exportación a Excel, login con roles y base de datos PostgreSQL.
 
 ---
 
 ## Requisitos
 
 - [Node.js](https://nodejs.org/en/download) v18 o superior
+- [PostgreSQL](https://www.postgresql.org/download/) 14 o superior, corriendo y accesible
 - Windows 10/11
 - Git
 
@@ -19,13 +20,19 @@ Sistema de gestión de inventario de equipos IT. Dashboard con gráficas, tabla 
 git clone https://github.com/Manuxosos/Pj_inventario.git
 cd Pj_inventario
 
-# 2. Ejecutar el instalador (doble clic o desde terminal)
+# 2. Configurar variables de entorno
+copy .env.example .env
+# Editar .env con tus credenciales de PostgreSQL y un JWT_SECRET propio
+
+# 3. Ejecutar el instalador (doble clic o desde terminal)
 instalar.bat
 ```
 
 El instalador hace todo automáticamente:
 - Instala dependencias del backend y frontend
-- Crea y carga la base de datos con los datos del inventario
+- Crea las tablas en PostgreSQL y carga el inventario inicial (`seed_data.json`)
+- Crea el usuario admin por defecto (definido en `.env`)
+- Compila el frontend para producción
 
 ---
 
@@ -36,18 +43,19 @@ El instalador hace todo automáticamente:
 | **Iniciar la app** | Doble clic en `iniciar.bat` |
 | **Detener la app** | Doble clic en `detener.bat` |
 
-La app abre automáticamente en `http://localhost:5173`
+La app abre automáticamente en `http://localhost:5173` (desarrollo) o `http://localhost:3001` (producción, si existe `frontend/dist`).
 
 ---
 
-## Credenciales
+## Roles de usuario
 
-| Campo | Valor |
-|-------|-------|
-| Usuario | `admin` |
-| Contraseña | `inventario2025` |
+| Rol | Permisos |
+|-----|----------|
+| **admin** | Acceso total: CRUD de equipos, exportar Excel, gestión de usuarios |
+| **it** | CRUD de equipos (incluye eliminar), exportar Excel — sin gestión de usuarios |
+| **observador** | Solo lectura del dashboard e inventario |
 
-> Para cambiar la contraseña edita `auth.js` — línea `bcrypt.hashSync('inventario2025', 10)`
+El primer usuario (admin) se crea automáticamente con las credenciales `APP_USER` / `APP_PASSWORD` definidas en `.env`. Desde la pestaña **Usuarios** (solo visible para admin) se pueden crear el resto de cuentas.
 
 ---
 
@@ -59,14 +67,15 @@ Pj_inventario/
 │   └── src/
 │       ├── components/
 │       └── App.jsx
-├── database.js        # Configuración SQLite
-├── server.js          # API REST Express
-├── seed.js            # Carga inicial de datos
-├── seed_data.json     # Datos del inventario
-├── auth.js            # Login + JWT
-├── iniciar.bat        # Iniciar servidores
-├── detener.bat        # Detener servidores
-└── instalar.bat       # Instalación inicial
+├── database.js        # Pool de PostgreSQL, esquema (equipos + usuarios)
+├── server.js           # API REST Express, middleware de roles
+├── seed.js             # Carga inicial de datos (solo si la tabla está vacía)
+├── seed_data.json      # Snapshot del inventario real
+├── auth.js             # Login + JWT (incluye rol del usuario)
+├── .env.example         # Plantilla de configuración
+├── iniciar.bat          # Iniciar servidores
+├── detener.bat          # Detener servidores
+└── instalar.bat         # Instalación inicial
 ```
 
 ---
@@ -77,15 +86,16 @@ Pj_inventario/
 |------|-----------|
 | Frontend | React + Vite |
 | Backend | Node.js + Express |
-| Base de datos | SQLite (better-sqlite3) |
+| Base de datos | PostgreSQL (`pg`) |
 | Gráficas | Recharts |
-| Autenticación | JWT + bcryptjs |
+| Autenticación | JWT + bcryptjs, roles por middleware |
 | Excel | ExcelJS |
 
 ---
 
 ## Seguridad
 
-- El servidor solo escucha en `127.0.0.1` (no accesible desde la red)
-- Todas las rutas de la API requieren token JWT
+- Todas las rutas de la API (excepto login) requieren token JWT
+- Las acciones de escritura están protegidas por rol (`requireRol`)
 - Las sesiones expiran en 8 horas
+- Por defecto el servidor escucha en `127.0.0.1`; para exponerlo a otros equipos/edificios, configurar `HOST=0.0.0.0` en `.env` y abrir el puerto correspondiente
