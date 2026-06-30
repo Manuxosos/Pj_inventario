@@ -1,12 +1,12 @@
 {
   "name": "proyectoinventario",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "2.0.0",
+  "description": "Inventario IT - PostgreSQL edition",
+  "main": "server.js",
   "scripts": {
-    "seed": "node seed.js",
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "seed": "node seed.js"
   },
   "keywords": [],
   "author": "",
@@ -14,10 +14,11 @@
   "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^12.10.0",
     "cors": "^2.8.6",
+    "dotenv": "^16.6.1",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.22.0"
   }
 }

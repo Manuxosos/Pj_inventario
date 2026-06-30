@@ -8,6 +8,7 @@ inventory.db
 # Archivos temporales
 *.log
 .env
+frontend/.env
 .DS_Store
 Thumbs.db
 
