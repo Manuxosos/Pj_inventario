@@ -107,15 +107,7 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
           <option value="">Todos los pisos</option>
           {opciones.pisos.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        <select
-          className="form-input"
-          value={filters.estado}
-          onChange={e => setFilters(f => ({ ...f, estado: e.target.value }))}
-        >
-          <option value="">Todos los estados</option>
-          {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
-        </select>
-        {(filters.search || filters.piso || filters.estado || filters.estadoIn || filters.ram || filters.modelo || filters.accesorio) && (
+        {(filters.search || filters.piso || filters.estadoIn || filters.ram || filters.modelo || filters.accesorio) && (
           <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
             Limpiar
           </button>
@@ -123,12 +115,13 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
       </div>
 
       {/* Chip de filtro activo desde dashboard */}
-      {(filters.ram || filters.modelo || filters.estadoIn || filters.accesorio) && (
+      {(filters.ram || filters.modelo || filters.estadoIn || filters.estado || filters.accesorio) && (
         <div className="active-filter-bar">
           <span className="active-filter-label">Filtro activo:</span>
-          {filters.ram      && <span className="active-filter-chip">RAM: {filters.ram}</span>}
-          {filters.modelo   && <span className="active-filter-chip">Modelo: {filters.modelo}</span>}
-          {filters.estadoIn && <span className="active-filter-chip">Estado: {filters.estadoIn.split(',').join(' / ')}</span>}
+          {filters.estado    && <span className="active-filter-chip">Estado: {filters.estado}</span>}
+          {filters.estadoIn  && <span className="active-filter-chip">Estado: {filters.estadoIn.split(',').join(' / ')}</span>}
+          {filters.ram       && <span className="active-filter-chip">RAM: {filters.ram}</span>}
+          {filters.modelo    && <span className="active-filter-chip">Modelo: {filters.modelo}</span>}
           {filters.accesorio && <span className="active-filter-chip">{ACCESORIO_LABEL[filters.accesorio] || filters.accesorio}: Con accesorio</span>}
           <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
             × Quitar
