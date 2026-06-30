@@ -56,7 +56,7 @@ const CustomLegend = ({ payload }) => (
   </ul>
 );
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }) {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
 
