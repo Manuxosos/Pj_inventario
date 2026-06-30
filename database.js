@@ -1,4 +1,5 @@
 const { Pool } = require('pg');
+const bcrypt = require('bcryptjs');
 require('dotenv').config();
 
 const pool = new Pool({
@@ -39,6 +40,18 @@ async function initSchema() {
   `);
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS usuarios (
+      id            SERIAL PRIMARY KEY,
+      nombre        TEXT NOT NULL,
+      usuario       TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      rol           TEXT NOT NULL CHECK (rol IN ('admin', 'it', 'observador')),
+      activo        BOOLEAN DEFAULT true,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
     CREATE OR REPLACE FUNCTION fn_set_updated_at()
     RETURNS TRIGGER AS $$
     BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
@@ -56,6 +69,17 @@ async function initSchema() {
       END IF;
     END $$
   `);
+
+  // Crear admin por defecto si no hay usuarios
+  const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
+  if (parseInt(rows[0].n) === 0) {
+    const hash = bcrypt.hashSync(process.env.APP_PASSWORD || 'inventario2025', 10);
+    await pool.query(
+      "INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ($1, $2, $3, 'admin')",
+      ['Administrador', process.env.APP_USER || 'admin', hash]
+    );
+    console.log('Usuario admin creado por defecto.');
+  }
 
   console.log('Schema listo.');
 }

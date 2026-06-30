@@ -200,3 +200,15 @@
 .badge-red    { background: rgba(255,61,127,0.1); color: var(--neon-pink);   border: 1px solid rgba(255,61,127,0.25); text-shadow: 0 0 8px rgba(255,61,127,0.5); }
 .badge-gray   { background: rgba(58,106,136,0.1); color: var(--text-muted);  border: 1px solid rgba(58,106,136,0.25); }
 .badge-purple { background: rgba(191,95,255,0.1); color: var(--neon-purple); border: 1px solid rgba(191,95,255,0.25); text-shadow: 0 0 8px rgba(191,95,255,0.5); }
+
+/* ── User badge (header) ── */
+.user-badge {
+  display: flex;
+  align-items: center;
+  padding: 5px 12px;
+  background: rgba(0,245,255,0.05);
+  border: 1px solid rgba(0,245,255,0.12);
+  border-radius: var(--radius);
+}
+.user-badge-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.4; }
+.user-badge-rol  { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }

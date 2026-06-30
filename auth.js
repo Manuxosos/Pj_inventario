@@ -1,16 +1,24 @@
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
+const bcrypt  = require('bcryptjs');
+const { pool } = require('./database');
 require('dotenv').config();
 
-const JWT_SECRET  = process.env.JWT_SECRET   || 'inventarioIT_secret_2025_xK9#mP2';
+const JWT_SECRET  = process.env.JWT_SECRET || 'inventarioIT_secret_2025_xK9#mP2';
 const JWT_EXPIRES = '8h';
-const USUARIO     = process.env.APP_USER     || 'admin';
-const PASSWORD_HASH = bcrypt.hashSync(process.env.APP_PASSWORD || 'inventario2025', 10);
 
-function login(usuario, password) {
-  if (usuario !== USUARIO) return null;
-  if (!bcrypt.compareSync(password, PASSWORD_HASH)) return null;
-  return jwt.sign({ usuario }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+async function login(usuario, password) {
+  const { rows } = await pool.query(
+    'SELECT * FROM usuarios WHERE usuario = $1 AND activo = true',
+    [usuario]
+  );
+  const user = rows[0];
+  if (!user) return null;
+  if (!bcrypt.compareSync(password, user.password_hash)) return null;
+  return jwt.sign(
+    { id: user.id, usuario: user.usuario, rol: user.rol, nombre: user.nombre },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES }
+  );
 }
 
 function verificarToken(req, res, next) {

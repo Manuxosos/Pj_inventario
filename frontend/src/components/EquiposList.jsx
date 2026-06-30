@@ -23,7 +23,8 @@ const ACCESORIO_LABEL = {
   monitor: 'Monitor', estuche: 'Estuche', adaptador_tplink: 'Adaptador Tp-Link',
 };
 
-export default function EquiposList({ refresh, externalFilters, onEdit, onView }) {
+export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView }) {
+  const puedeEditar = rol === 'admin' || rol === 'it';
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
@@ -170,8 +171,12 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
                   <td>{eq.responsable || '—'}</td>
                   <td className="actions-cell">
                     <button className="btn btn-ghost btn-sm" onClick={() => onView(eq)} title="Ver detalle"><Eye size={14}/></button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar"><Pencil size={14}/></button>
-                    <button className="btn btn-ghost btn-sm danger-btn" onClick={() => handleDelete(eq.id, eq.id_activo)} disabled={deleting === eq.id} title="Eliminar"><Trash2 size={14}/></button>
+                    {puedeEditar && onEdit && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar"><Pencil size={14}/></button>
+                    )}
+                    {puedeEditar && (
+                      <button className="btn btn-ghost btn-sm danger-btn" onClick={() => handleDelete(eq.id, eq.id_activo)} disabled={deleting === eq.id} title="Eliminar"><Trash2 size={14}/></button>
+                    )}
                   </td>
                 </tr>
               ))}

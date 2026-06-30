@@ -87,6 +87,12 @@
   gap: 16px;
 }
 
+.dash-row-full {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
 .dash-card {
   padding: 18px 16px 14px;
 }
