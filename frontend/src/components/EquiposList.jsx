@@ -27,16 +27,10 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
-  const [filters, setFilters] = useState({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' });
+  const emptyFilters = { ...emptyFilters };
+  const [filters, setFilters] = useState({ ...emptyFilters, ...(externalFilters || {}) });
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
-
-  // Aplicar filtros del dashboard cuando llegan
-  useEffect(() => {
-    if (externalFilters !== null && externalFilters !== undefined) {
-      setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '', ...externalFilters });
-    }
-  }, [externalFilters]);
 
   // Cargar totales globales (sin filtros) para los stats
   useEffect(() => {
@@ -120,7 +114,7 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
           {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
         </select>
         {(filters.search || filters.piso || filters.estado || filters.estadoIn || filters.ram || filters.modelo || filters.accesorio) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ ...emptyFilters })}>
             Limpiar
           </button>
         )}
@@ -134,7 +128,7 @@ export default function EquiposList({ refresh, externalFilters, onEdit, onView }
           {filters.modelo   && <span className="active-filter-chip">Modelo: {filters.modelo}</span>}
           {filters.estadoIn && <span className="active-filter-chip">Estado: {filters.estadoIn.split(',').join(' / ')}</span>}
           {filters.accesorio && <span className="active-filter-chip">{ACCESORIO_LABEL[filters.accesorio] || filters.accesorio}: Con accesorio</span>}
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ ...emptyFilters })}>
             × Quitar
           </button>
         </div>
