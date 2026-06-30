@@ -1,12 +1,11 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
-const JWT_SECRET = 'REDACTED_SECRET';
+const JWT_SECRET  = process.env.JWT_SECRET   || 'REDACTED_SECRET';
 const JWT_EXPIRES = '8h';
-
-// Usuario admin — cambia la contraseña aquí
-const USUARIO = 'admin';
-const PASSWORD_HASH = bcrypt.hashSync('REDACTED_PASSWORD', 10);
+const USUARIO     = process.env.APP_USER     || 'admin';
+const PASSWORD_HASH = bcrypt.hashSync(process.env.APP_PASSWORD || 'REDACTED_PASSWORD', 10);
 
 function login(usuario, password) {
   if (usuario !== USUARIO) return null;
@@ -15,7 +14,7 @@ function login(usuario, password) {
 }
 
 function verificarToken(req, res, next) {
-  const auth = req.headers['authorization'];
+  const auth  = req.headers['authorization'];
   const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No autorizado' });
   try {

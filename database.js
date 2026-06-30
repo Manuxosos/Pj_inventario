@@ -1,40 +1,68 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const db = new Database(path.join(__dirname, 'inventory.db'));
+const pool = new Pool({
+  host:     process.env.DB_HOST     || 'localhost',
+  port:     parseInt(process.env.DB_PORT || '5432'),
+  database: process.env.DB_NAME     || 'inventario',
+  user:     process.env.DB_USER     || 'postgres',
+  password: process.env.DB_PASSWORD || '',
+});
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS equipos (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    id_activo TEXT,
-    cargador TEXT,
-    id_ex TEXT,
-    team TEXT,
-    marca_modelo TEXT,
-    procesador TEXT,
-    ram TEXT,
-    disco_duro TEXT,
-    so TEXT,
-    numero_serie TEXT UNIQUE,
-    usuario TEXT,
-    estado TEXT,
-    observacion TEXT,
-    responsable TEXT,
-    audifonos TEXT,
-    mouse TEXT,
-    monitor TEXT,
-    adaptador_tplink TEXT,
-    estuche TEXT,
-    piso TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  );
+async function initSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS equipos (
+      id               SERIAL PRIMARY KEY,
+      id_activo        TEXT DEFAULT '',
+      cargador         TEXT DEFAULT '',
+      id_ex            TEXT DEFAULT '',
+      team             TEXT DEFAULT '',
+      marca_modelo     TEXT DEFAULT '',
+      procesador       TEXT DEFAULT '',
+      ram              TEXT DEFAULT '',
+      disco_duro       TEXT DEFAULT '',
+      so               TEXT DEFAULT '',
+      numero_serie     TEXT UNIQUE,
+      usuario          TEXT DEFAULT '',
+      estado           TEXT DEFAULT '',
+      observacion      TEXT DEFAULT '',
+      responsable      TEXT DEFAULT '',
+      audifonos        TEXT DEFAULT '',
+      mouse            TEXT DEFAULT '',
+      monitor          TEXT DEFAULT '',
+      adaptador_tplink TEXT DEFAULT '',
+      estuche          TEXT DEFAULT '',
+      piso             TEXT DEFAULT '',
+      created_at       TIMESTAMPTZ DEFAULT NOW(),
+      updated_at       TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
 
-  CREATE TRIGGER IF NOT EXISTS equipos_updated_at
-  AFTER UPDATE ON equipos
-  BEGIN
-    UPDATE equipos SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
-  END;
-`);
+  await pool.query(`
+    CREATE OR REPLACE FUNCTION fn_set_updated_at()
+    RETURNS TRIGGER AS $$
+    BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+    $$ LANGUAGE plpgsql
+  `);
 
-module.exports = db;
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_equipos_updated_at'
+      ) THEN
+        CREATE TRIGGER trg_equipos_updated_at
+        BEFORE UPDATE ON equipos
+        FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+      END IF;
+    END $$
+  `);
+
+  console.log('Schema listo.');
+}
+
+const initPromise = initSchema().catch(err => {
+  console.error('Error inicializando schema PostgreSQL:', err.message);
+  process.exit(1);
+});
+
+module.exports = { pool, initPromise };
