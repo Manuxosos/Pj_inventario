@@ -21,12 +21,27 @@ app.use('/api', verificarToken);
 
 // GET all equipos with optional filters
 app.get('/api/equipos', (req, res) => {
-  const { piso, estado, search } = req.query;
+  const { piso, estado, estadoIn, search, ram, modelo, accesorio } = req.query;
   let query = 'SELECT * FROM equipos WHERE 1=1';
   const params = [];
 
-  if (piso) { query += ' AND piso = ?'; params.push(piso); }
+  if (piso)   { query += ' AND piso = ?'; params.push(piso); }
   if (estado) { query += ' AND estado = ?'; params.push(estado); }
+  if (estadoIn) {
+    const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
+    if (vals.length) {
+      query += ` AND estado IN (${vals.map(() => '?').join(',')})`;
+      params.push(...vals);
+    }
+  }
+  if (ram)    { query += ' AND ram = ?'; params.push(ram); }
+  if (modelo) { query += ' AND marca_modelo = ?'; params.push(modelo); }
+  if (accesorio) {
+    const COLS = ['cargador','mouse','audifonos','monitor','estuche','adaptador_tplink'];
+    if (COLS.includes(accesorio)) {
+      query += ` AND (${accesorio} = 'Si' OR ${accesorio} = 'Si 2')`;
+    }
+  }
   if (search) {
     query += ' AND (id_activo LIKE ? OR numero_serie LIKE ? OR marca_modelo LIKE ? OR team LIKE ? OR responsable LIKE ?)';
     const s = `%${search}%`;

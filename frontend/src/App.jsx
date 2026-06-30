@@ -11,6 +11,12 @@ export default function App() {
   const [tab, setTab] = useState('dashboard');
   const [modal, setModal] = useState(null);
   const [refresh, setRefresh] = useState(0);
+  const [dashboardFilter, setDashboardFilter] = useState(null);
+
+  const handleDashboardNav = (filter) => {
+    setDashboardFilter(filter);
+    setTab('inventario');
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
@@ -62,7 +68,7 @@ export default function App() {
             <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
               <LayoutDashboard size={15} /> Dashboard
             </button>
-            <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => setTab('inventario')}>
+            <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => { setDashboardFilter(null); setTab('inventario'); }}>
               <ClipboardList size={15} /> Inventario
             </button>
           </nav>
@@ -87,10 +93,11 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {tab === 'dashboard'  && <Dashboard />}
+        {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} />}
         {tab === 'inventario' && (
           <EquiposList
             refresh={refresh}
+            externalFilters={dashboardFilter}
             onEdit={(equipo) => setModal({ mode: 'edit', equipo })}
             onView={(equipo) => setModal({ mode: 'view', equipo })}
           />

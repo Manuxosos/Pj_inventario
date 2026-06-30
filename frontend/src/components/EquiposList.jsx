@@ -18,13 +18,25 @@ function getBadgeClass(estado) {
   return ESTADO_BADGE[estado] || 'badge-gray';
 }
 
-export default function EquiposList({ refresh, onEdit, onView }) {
+const ACCESORIO_LABEL = {
+  cargador: 'Cargador', mouse: 'Mouse', audifonos: 'Audífonos',
+  monitor: 'Monitor', estuche: 'Estuche', adaptador_tplink: 'Adaptador Tp-Link',
+};
+
+export default function EquiposList({ refresh, externalFilters, onEdit, onView }) {
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
-  const [filters, setFilters] = useState({ search: '', piso: '', estado: '' });
+  const [filters, setFilters] = useState({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' });
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+
+  // Aplicar filtros del dashboard cuando llegan
+  useEffect(() => {
+    if (externalFilters !== null && externalFilters !== undefined) {
+      setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '', ...externalFilters });
+    }
+  }, [externalFilters]);
 
   // Cargar totales globales (sin filtros) para los stats
   useEffect(() => {
@@ -36,9 +48,13 @@ export default function EquiposList({ refresh, onEdit, onView }) {
   useEffect(() => {
     setLoading(true);
     const params = {};
-    if (filters.search) params.search = filters.search;
-    if (filters.piso)   params.piso   = filters.piso;
-    if (filters.estado) params.estado = filters.estado;
+    if (filters.search)   params.search   = filters.search;
+    if (filters.piso)     params.piso     = filters.piso;
+    if (filters.estado)   params.estado   = filters.estado;
+    if (filters.estadoIn) params.estadoIn = filters.estadoIn;
+    if (filters.ram)      params.ram      = filters.ram;
+    if (filters.modelo)   params.modelo   = filters.modelo;
+    if (filters.accesorio) params.accesorio = filters.accesorio;
     getEquipos(params).then(data => {
       setEquipos(data);
       setLoading(false);
@@ -103,12 +119,26 @@ export default function EquiposList({ refresh, onEdit, onView }) {
           <option value="">Todos los estados</option>
           {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
         </select>
-        {(filters.search || filters.piso || filters.estado) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '' })}>
+        {(filters.search || filters.piso || filters.estado || filters.estadoIn || filters.ram || filters.modelo || filters.accesorio) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
             Limpiar
           </button>
         )}
       </div>
+
+      {/* Chip de filtro activo desde dashboard */}
+      {(filters.ram || filters.modelo || filters.estadoIn || filters.accesorio) && (
+        <div className="active-filter-bar">
+          <span className="active-filter-label">Filtro activo:</span>
+          {filters.ram      && <span className="active-filter-chip">RAM: {filters.ram}</span>}
+          {filters.modelo   && <span className="active-filter-chip">Modelo: {filters.modelo}</span>}
+          {filters.estadoIn && <span className="active-filter-chip">Estado: {filters.estadoIn.split(',').join(' / ')}</span>}
+          {filters.accesorio && <span className="active-filter-chip">{ACCESORIO_LABEL[filters.accesorio] || filters.accesorio}: Con accesorio</span>}
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
+            × Quitar
+          </button>
+        </div>
+      )}
 
       {/* Table */}
       <div className="table-wrapper card">

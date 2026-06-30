@@ -138,3 +138,14 @@
   font-size: 11px;
   color: #94a3b8;
 }
+
+.dash-card-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin: -8px 0 8px;
+  opacity: 0.6;
+}
+
+.kpi-card:hover .kpi-num {
+  text-shadow: 0 0 20px currentColor;
+}
