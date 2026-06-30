@@ -2,6 +2,7 @@ const express = require('express');
 const cors    = require('cors');
 const path    = require('path');
 const fs      = require('fs');
+const bcrypt  = require('bcryptjs');
 const ExcelJS = require('exceljs');
 require('dotenv').config();
 
@@ -10,40 +11,52 @@ const { login, verificarToken } = require('./auth');
 
 const app = express();
 
-// CORS — en produccion pon la IP/dominio del servidor en CORS_ORIGIN
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',').map(s => s.trim());
 app.use(cors({ origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins }));
 app.use(express.json());
 
-// Helper: construye parametros posicionales pg ($1, $2, ...)
+// ── Middleware de roles ───────────────────────────────────────────────────────
+function requireRol(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user?.rol)) {
+      return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+    }
+    next();
+  };
+}
+
+// ── Helper parámetros pg ──────────────────────────────────────────────────────
 function mkParams() {
   const params = [];
   const add = v => { params.push(v); return `$${params.length}`; };
   return { params, add };
 }
 
-const ACCESORIO_COLS = ['cargador','mouse','audifonos','monitor','estuche','adaptador_tplink'];
-
-const EQUIPO_FIELDS = [
+const ACCESORIO_COLS  = ['cargador','mouse','audifonos','monitor','estuche','adaptador_tplink'];
+const EQUIPO_FIELDS   = [
   'id_activo','cargador','id_ex','team','marca_modelo','procesador',
   'ram','disco_duro','so','numero_serie','usuario','estado',
   'observacion','responsable','audifonos','mouse','monitor',
   'adaptador_tplink','estuche','piso',
 ];
 
-// ── Login (publico) ──────────────────────────────────────────────────────────
-app.post('/api/login', (req, res) => {
-  const { usuario, password } = req.body;
-  const token = login(usuario, password);
-  if (!token) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
-  res.json({ token });
+// ── Login (público) ───────────────────────────────────────────────────────────
+app.post('/api/login', async (req, res) => {
+  try {
+    const { usuario, password } = req.body;
+    const token = await login(usuario, password);
+    if (!token) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// ── Rutas protegidas ─────────────────────────────────────────────────────────
+// ── Rutas protegidas (requieren token) ────────────────────────────────────────
 app.use('/api', verificarToken);
 
-// GET /api/equipos — con filtros opcionales
+// GET /api/equipos
 app.get('/api/equipos', async (req, res) => {
   try {
     const { piso, estado, estadoIn, search, ram, modelo, accesorio } = req.query;
@@ -67,8 +80,8 @@ app.get('/api/equipos', async (req, res) => {
     }
     q += ' ORDER BY piso, id_activo';
 
-    const result = await pool.query(q, params);
-    res.json(result.rows);
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -85,8 +98,8 @@ app.get('/api/equipos/:id', async (req, res) => {
   }
 });
 
-// POST /api/equipos
-app.post('/api/equipos', async (req, res) => {
+// POST /api/equipos — solo admin e IT
+app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
   try {
     const vals = EQUIPO_FIELDS.map(f => {
       const v = req.body[f] ?? '';
@@ -103,8 +116,8 @@ app.post('/api/equipos', async (req, res) => {
   }
 });
 
-// PUT /api/equipos/:id
-app.put('/api/equipos/:id', async (req, res) => {
+// PUT /api/equipos/:id — solo admin e IT
+app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
     const vals = EQUIPO_FIELDS.map(f => {
       const v = req.body[f] ?? '';
@@ -112,18 +125,15 @@ app.put('/api/equipos/:id', async (req, res) => {
     });
     vals.push(req.params.id);
     const sets = EQUIPO_FIELDS.map((f, i) => `${f} = $${i + 1}`).join(', ');
-    await pool.query(
-      `UPDATE equipos SET ${sets} WHERE id = $${EQUIPO_FIELDS.length + 1}`,
-      vals
-    );
+    await pool.query(`UPDATE equipos SET ${sets} WHERE id = $${EQUIPO_FIELDS.length + 1}`, vals);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE /api/equipos/:id
-app.delete('/api/equipos/:id', async (req, res) => {
+// DELETE /api/equipos/:id — admin e IT
+app.delete('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
     await pool.query('DELETE FROM equipos WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
@@ -145,16 +155,12 @@ app.get('/api/opciones', async (req, res) => {
   }
 });
 
-// GET /api/exportar
-app.get('/api/exportar', async (req, res) => {
+// GET /api/exportar — admin e IT
+app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { rows: equipos } = await pool.query(
-      "SELECT * FROM equipos ORDER BY piso, id_activo"
-    );
-
+    const { rows: equipos } = await pool.query('SELECT * FROM equipos ORDER BY piso, id_activo');
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Equipos');
-
     const cols = [
       { header: 'ID Activo',         key: 'id_activo',        width: 12 },
       { header: 'Cargador',          key: 'cargador',          width: 10 },
@@ -177,44 +183,27 @@ app.get('/api/exportar', async (req, res) => {
       { header: 'Estuche',           key: 'estuche',           width: 10 },
     ];
     ws.columns = cols;
-
     const headerRow = ws.getRow(1);
     headerRow.eachCell(cell => {
-      cell.font      = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-      cell.fill      = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border    = {
-        bottom: { style: 'thin', color: { argb: 'FFAAAAAA' } },
-        right:  { style: 'thin', color: { argb: 'FFAAAAAA' } },
-      };
+      cell.border = { bottom: { style: 'thin', color: { argb: 'FFAAAAAA' } }, right: { style: 'thin', color: { argb: 'FFAAAAAA' } } };
     });
     headerRow.height = 20;
-
+    const pisoColors  = { 'PISO 2': 'FFDCE6F1', 'PISO 3': 'FFE2EFDA', 'PISO 4': 'FFFFF2CC', 'PISO 5': 'FFFCE4D6', 'PISO 7': 'FFEDEDED', 'BODEGA': 'FFF2F2F2' };
+    const estadoColors = { 'En uso agente': 'FFBDD7EE', 'En uso TI': 'FFBDD7EE', 'LISTA': 'FFC6EFCE', 'NO LISTA': 'FFFFC7CE', 'REVISION': 'FFFFEB9C', 'NUEVO': 'FFE2D0F1' };
     const pisos = [...new Set(equipos.map(e => e.piso).filter(Boolean))];
-    const pisoColors  = {
-      'PISO 2': 'FFDCE6F1', 'PISO 3': 'FFE2EFDA', 'PISO 4': 'FFFFF2CC',
-      'PISO 5': 'FFFCE4D6', 'PISO 7': 'FFEDEDED', 'BODEGA': 'FFF2F2F2',
-    };
-    const estadoColors = {
-      'En uso agente': 'FFBDD7EE', 'En uso TI': 'FFBDD7EE',
-      'LISTA': 'FFC6EFCE', 'NO LISTA': 'FFFFC7CE',
-      'REVISION': 'FFFFEB9C', 'NUEVO': 'FFE2D0F1',
-    };
-
     for (const piso of pisos) {
       const pisoRow = ws.addRow([piso]);
       pisoRow.getCell(1).font = { bold: true, size: 12, color: { argb: 'FF1E3A5F' } };
       pisoRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pisoColors[piso] || 'FFF2F2F2' } };
       pisoRow.height = 18;
       ws.mergeCells(`A${pisoRow.number}:S${pisoRow.number}`);
-
       for (const eq of equipos.filter(e => e.piso === piso)) {
         const row = ws.addRow(cols.map(c => eq[c.key] || ''));
         row.eachCell((cell, colNum) => {
-          cell.border = {
-            bottom: { style: 'hair', color: { argb: 'FFCCCCCC' } },
-            right:  { style: 'hair', color: { argb: 'FFCCCCCC' } },
-          };
+          cell.border = { bottom: { style: 'hair', color: { argb: 'FFCCCCCC' } }, right: { style: 'hair', color: { argb: 'FFCCCCCC' } } };
           if (colNum === 12 && eq.estado && estadoColors[eq.estado]) {
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: estadoColors[eq.estado] } };
             cell.font = { bold: true };
@@ -222,10 +211,8 @@ app.get('/api/exportar', async (req, res) => {
         });
       }
     }
-
-    ws.views      = [{ state: 'frozen', ySplit: 1 }];
+    ws.views = [{ state: 'frozen', ySplit: 1 }];
     ws.autoFilter = { from: 'A1', to: 'S1' };
-
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="inventario_${new Date().toISOString().slice(0,10)}.xlsx"`);
     await wb.xlsx.write(res);
@@ -235,20 +222,83 @@ app.get('/api/exportar', async (req, res) => {
   }
 });
 
-// ── Servir frontend compilado (produccion) ───────────────────────────────────
+// ── Gestión de usuarios (solo admin) ─────────────────────────────────────────
+app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT id, nombre, usuario, rol, activo, created_at FROM usuarios ORDER BY created_at'
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/usuarios', requireRol('admin'), async (req, res) => {
+  try {
+    const { nombre, usuario, password, rol } = req.body;
+    if (!nombre || !usuario || !password || !rol) {
+      return res.status(400).json({ error: 'Todos los campos son obligatorios' });
+    }
+    const hash = bcrypt.hashSync(password, 10);
+    const { rows } = await pool.query(
+      'INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ($1,$2,$3,$4) RETURNING id',
+      [nombre, usuario, hash, rol]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
+  try {
+    const { nombre, usuario, password, rol, activo } = req.body;
+    if (password) {
+      const hash = bcrypt.hashSync(password, 10);
+      await pool.query(
+        'UPDATE usuarios SET nombre=$1, usuario=$2, password_hash=$3, rol=$4, activo=$5 WHERE id=$6',
+        [nombre, usuario, hash, rol, activo, req.params.id]
+      );
+    } else {
+      await pool.query(
+        'UPDATE usuarios SET nombre=$1, usuario=$2, rol=$3, activo=$4 WHERE id=$5',
+        [nombre, usuario, rol, activo, req.params.id]
+      );
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'El nombre de usuario ya existe' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
+  try {
+    if (parseInt(req.params.id) === req.user.id) {
+      return res.status(400).json({ error: 'No puedes eliminar tu propio usuario' });
+    }
+    await pool.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Servir frontend compilado (producción) ────────────────────────────────────
 const DIST = path.join(__dirname, 'frontend', 'dist');
 if (fs.existsSync(DIST)) {
   app.use(express.static(DIST));
   app.get('*', (req, res) => res.sendFile(path.join(DIST, 'index.html')));
 }
 
-// ── Arrancar servidor ────────────────────────────────────────────────────────
+// ── Arrancar servidor ─────────────────────────────────────────────────────────
 const PORT = parseInt(process.env.PORT || '3001');
 const HOST = process.env.HOST || '127.0.0.1';
 
 initPromise.then(() => {
   app.listen(PORT, HOST, () => {
     console.log(`Servidor en http://${HOST}:${PORT}`);
-    if (fs.existsSync(DIST)) console.log('Sirviendo frontend compilado.');
   });
 });

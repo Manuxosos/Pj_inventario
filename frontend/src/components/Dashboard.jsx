@@ -7,7 +7,6 @@ import {
 import { Laptop, Users, Package, Warehouse, AlertCircle } from 'lucide-react';
 import './Dashboard.css';
 
-// Paleta neon equilibrada — colores separados en el espectro
 const C = {
   cyan:   '#00e5ff',
   green:  '#00e676',
@@ -28,7 +27,6 @@ const ESTADO_COLORS = {
   'Sin estado':    '#334155',
 };
 
-// Colores para barras/pie que no choquen entre sí
 const CHART_COLORS = [C.cyan, C.green, C.amber, C.purple, C.pink, C.blue, C.orange];
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -56,6 +54,12 @@ const CustomLegend = ({ payload }) => (
   </ul>
 );
 
+// Normaliza un valor de RAM para agrupar "8 GB", "8GB", "8gb" como el mismo
+function normRam(raw) {
+  if (!raw) return '';
+  return raw.trim().replace(/\s+/g, ' ').toUpperCase();
+}
+
 export default function Dashboard({ onNavigate }) {
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +77,7 @@ export default function Dashboard({ onNavigate }) {
   const nuevo    = count(e => e.estado === 'NUEVO');
   const revision = count(e => e.estado === 'NO LISTA' || e.estado === 'REVISION');
 
-  // Estados — agrupar vacíos como "Sin estado"
+  // Estados
   const byEstado = Object.entries(
     todos.reduce((acc, e) => {
       const k = e.estado || 'Sin estado';
@@ -83,13 +87,17 @@ export default function Dashboard({ onNavigate }) {
   ).map(([name, value]) => ({ name, value }))
    .sort((a, b) => b.value - a.value);
 
-  // Pisos — ordenados de mayor a menor
+  // Pisos
   const byPiso = Object.entries(
-    todos.reduce((acc, e) => { acc[e.piso || 'Sin piso'] = (acc[e.piso || 'Sin piso'] || 0) + 1; return acc; }, {})
+    todos.reduce((acc, e) => {
+      const k = e.piso || 'Sin piso';
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {})
   ).map(([piso, total]) => ({ piso, total }))
    .sort((a, b) => b.total - a.total);
 
-  // Modelos — top 6
+  // Modelos — top 8
   const byModelo = Object.entries(
     todos.reduce((acc, e) => {
       if (!e.marca_modelo) return acc;
@@ -98,25 +106,18 @@ export default function Dashboard({ onNavigate }) {
     }, {})
   ).map(([modelo, total]) => ({ modelo, total }))
    .sort((a, b) => b.total - a.total)
-   .slice(0, 6);
+   .slice(0, 8);
 
-  // RAM
-  const byRam = Object.entries(
-    todos.reduce((acc, e) => {
-      const k = e.ram || 'Sin datos';
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name, value }))
-   .filter(r => r.name !== 'Sin datos')
-   .sort((a, b) => b.value - a.value);
-
-  // Accesorios — con campo de DB para filtrado
-  const accesorios = [
-    { nombre: 'Cargador',  campo: 'cargador',  si: count(e => e.cargador === 'Si') },
-    { nombre: 'Mouse',     campo: 'mouse',     si: count(e => e.mouse === 'Si' || e.mouse === 'Si 2') },
-    { nombre: 'Audífonos', campo: 'audifonos', si: count(e => e.audifonos === 'Si') },
-  ].map(a => ({ ...a, no: todos.length - a.si }));
+  // RAM — normalizada para evitar duplicados por espacios/capitalización
+  const ramMap = {};
+  for (const e of todos) {
+    const k = normRam(e.ram);
+    if (!k) continue;
+    ramMap[k] = (ramMap[k] || 0) + 1;
+  }
+  const byRam = Object.entries(ramMap)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value);
 
   const nav = onNavigate || (() => {});
 
@@ -140,6 +141,7 @@ export default function Dashboard({ onNavigate }) {
       {/* Fila 1: Estado + Piso + RAM */}
       <div className="dash-row-3">
 
+        {/* Estado */}
         <div className="dash-card card">
           <h3 className="dash-card-title">Estado de equipos</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -158,19 +160,21 @@ export default function Dashboard({ onNavigate }) {
           </ResponsiveContainer>
         </div>
 
+        {/* Piso */}
         <div className="dash-card card">
           <h3 className="dash-card-title">Equipos por piso</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}
-              onClick={(e) => e?.activePayload?.[0] && nav({ piso: e.activePayload[0].payload.piso })}
-              style={{ cursor: 'pointer' }}>
+          <p className="dash-card-hint">Click en una barra para filtrar</p>
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
               <XAxis dataKey="piso" tick={{ fontSize: 11, fill: '#3a6a88' }}
                 axisLine={{ stroke: 'rgba(0,229,255,0.1)' }} tickLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3a6a88' }}
                 axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
-              <Bar dataKey="total" name="Equipos" radius={[4, 4, 0, 0]} maxBarSize={40}>
+              <Bar dataKey="total" name="Equipos" radius={[4, 4, 0, 0]} maxBarSize={40}
+                style={{ cursor: 'pointer' }}
+                onClick={(data) => nav({ piso: data.piso })}>
                 {byPiso.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
                     style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}66)` }} />
@@ -180,16 +184,18 @@ export default function Dashboard({ onNavigate }) {
           </ResponsiveContainer>
         </div>
 
+        {/* RAM */}
         <div className="dash-card card">
           <h3 className="dash-card-title">RAM</h3>
-          <ResponsiveContainer width="100%" height={240}>
+          <p className="dash-card-hint">Click en un segmento para filtrar</p>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={byRam} dataKey="value" nameKey="name"
                 cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}
                 onClick={(e) => nav({ ram: e.name })}
                 style={{ cursor: 'pointer' }}>
                 {byRam.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i]} stroke="transparent" />
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="transparent" />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -200,50 +206,31 @@ export default function Dashboard({ onNavigate }) {
 
       </div>
 
-      {/* Fila 2: Modelos + Accesorios */}
-      <div className="dash-row-2col">
-
+      {/* Fila 2: Modelos — ancho completo */}
+      <div className="dash-row-full">
         <div className="dash-card card">
           <h3 className="dash-card-title">Modelos de equipos</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <p className="dash-card-hint">Click en una barra para ver esos equipos en el inventario</p>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={byModelo} layout="vertical"
-              margin={{ top: 4, right: 30, left: 10, bottom: 4 }}
-              onClick={(e) => e?.activePayload?.[0] && nav({ modelo: e.activePayload[0].payload.modelo })}
-              style={{ cursor: 'pointer' }}>
+              margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" horizontal={false} />
               <XAxis type="number" allowDecimals={false}
                 tick={{ fontSize: 11, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="modelo" type="category" width={155}
+              <YAxis dataKey="modelo" type="category" width={170}
                 tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
-              <Bar dataKey="total" name="Equipos" radius={[0, 4, 4, 0]} maxBarSize={20}
-                fill={C.cyan}
-                style={{ filter: 'drop-shadow(0 0 4px rgba(0,229,255,0.4))' }} />
+              <Bar dataKey="total" name="Equipos" radius={[0, 4, 4, 0]} maxBarSize={22}
+                style={{ cursor: 'pointer' }}
+                onClick={(data) => nav({ modelo: data.modelo })}>
+                {byModelo.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
+                    style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}66)` }} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
-
-        <div className="dash-card card">
-          <h3 className="dash-card-title">Accesorios asignados</h3>
-          <p className="dash-card-hint">Click en verde para ver equipos con accesorio</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={accesorios} margin={{ top: 4, right: 20, left: -20, bottom: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
-              <XAxis dataKey="nombre" tick={{ fontSize: 12, fill: '#94a3b8' }}
-                axisLine={{ stroke: 'rgba(0,229,255,0.1)' }} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3a6a88' }}
-                axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
-              <Legend content={<CustomLegend />} />
-              <Bar dataKey="si" name="Con accesorio" fill={C.green} radius={[4,4,0,0]}
-                stackId="a" style={{ filter: 'drop-shadow(0 0 4px rgba(0,230,118,0.35))', cursor: 'pointer' }}
-                onClick={(data) => nav({ accesorio: data.campo })} />
-              <Bar dataKey="no" name="Sin accesorio" fill="#0e2240" radius={[4,4,0,0]}
-                stackId="a" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
       </div>
 
     </div>

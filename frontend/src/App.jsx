@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Download, PlusCircle, Monitor, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, Download, PlusCircle, Monitor, LogOut } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
+import Usuarios from './components/Usuarios';
 import Login from './components/Login';
+import { exportarExcel } from './api';
 import './App.css';
+
+function getUserInfo() {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+}
 
 export default function App() {
   const [autenticado, setAutenticado] = useState(!!localStorage.getItem('token'));
@@ -12,6 +24,11 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [dashboardFilter, setDashboardFilter] = useState(null);
+
+  const userInfo = autenticado ? getUserInfo() : null;
+  const rol      = userInfo?.rol || 'observador';
+  const puedeEditar  = rol === 'admin' || rol === 'it';
+  const esAdmin      = rol === 'admin';
 
   const handleDashboardNav = (filter) => {
     setDashboardFilter(filter);
@@ -30,19 +47,29 @@ export default function App() {
   };
 
   const handleExportar = async () => {
-    const res = await fetch('http://localhost:3001/api/exportar');
-    const blob = await res.blob();
-    const fecha = new Date().toISOString().slice(0, 10);
     try {
-      const handle = await window.showSaveFilePicker({
-        suggestedName: `inventario_equipos_${fecha}.xlsx`,
-        types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
-      });
-      const writable = await handle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-    } catch (e) {
-      if (e.name !== 'AbortError') console.error(e);
+      const blob = await exportarExcel();
+      const fecha = new Date().toISOString().slice(0, 10);
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: `inventario_equipos_${fecha}.xlsx`,
+          types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `inventario_equipos_${fecha}.xlsx`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      }
+    } catch (err) {
+      console.error('Error exportando:', err);
     }
   };
 
@@ -71,13 +98,23 @@ export default function App() {
             <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => { setDashboardFilter(null); setTab('inventario'); }}>
               <ClipboardList size={15} /> Inventario
             </button>
+            {esAdmin && (
+              <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => setTab('usuarios')}>
+                <Users size={15} /> Usuarios
+              </button>
+            )}
           </nav>
 
           <div className="header-actions">
-            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión">
-              <LogOut size={16} />
-            </button>
-            {tab === 'inventario' && (
+            {userInfo && (
+              <div className="user-badge">
+                <div>
+                  <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
+                  <div className="user-badge-rol">{rol}</div>
+                </div>
+              </div>
+            )}
+            {tab === 'inventario' && puedeEditar && (
               <>
                 <button className="btn btn-secondary" onClick={handleExportar}>
                   <Download size={14} /> Exportar Excel
@@ -87,6 +124,9 @@ export default function App() {
                 </button>
               </>
             )}
+            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión">
+              <LogOut size={16} />
+            </button>
           </div>
 
         </div>
@@ -98,10 +138,12 @@ export default function App() {
           <EquiposList
             refresh={refresh}
             externalFilters={dashboardFilter}
-            onEdit={(equipo) => setModal({ mode: 'edit', equipo })}
+            rol={rol}
+            onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
             onView={(equipo) => setModal({ mode: 'view', equipo })}
           />
         )}
+        {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
       </main>
 
       {modal && (
