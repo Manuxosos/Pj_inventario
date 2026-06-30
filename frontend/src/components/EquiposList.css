@@ -90,3 +90,35 @@
 }
 
 .danger-btn:hover { color: var(--danger) !important; border-color: var(--danger) !important; }
+
+/* Chip de filtro activo desde dashboard */
+.active-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  background: rgba(0,245,255,0.04);
+  border: 1px solid rgba(0,245,255,0.15);
+  border-radius: 8px;
+  flex-wrap: wrap;
+}
+
+.active-filter-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.active-filter-chip {
+  background: rgba(0,245,255,0.1);
+  border: 1px solid rgba(0,245,255,0.3);
+  color: var(--neon-cyan);
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(0,245,255,0.4);
+}

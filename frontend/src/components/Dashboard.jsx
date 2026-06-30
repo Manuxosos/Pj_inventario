@@ -111,23 +111,30 @@ export default function Dashboard() {
    .filter(r => r.name !== 'Sin datos')
    .sort((a, b) => b.value - a.value);
 
-  // Accesorios — solo los que tienen datos reales
+  // Accesorios — con campo de DB para filtrado
   const accesorios = [
-    { nombre: 'Cargador',  si: count(e => e.cargador === 'Si') },
-    { nombre: 'Mouse',     si: count(e => e.mouse === 'Si' || e.mouse === 'Si 2') },
-    { nombre: 'Audífonos', si: count(e => e.audifonos === 'Si') },
+    { nombre: 'Cargador',  campo: 'cargador',  si: count(e => e.cargador === 'Si') },
+    { nombre: 'Mouse',     campo: 'mouse',     si: count(e => e.mouse === 'Si' || e.mouse === 'Si 2') },
+    { nombre: 'Audífonos', campo: 'audifonos', si: count(e => e.audifonos === 'Si') },
   ].map(a => ({ ...a, no: todos.length - a.si }));
+
+  const nav = onNavigate || (() => {});
 
   return (
     <div className="dashboard">
 
       {/* KPIs */}
       <div className="kpi-row">
-        <KpiCard value={todos.length} label="Total Equipos"      color="cyan"   icon={<Laptop size={20}/>} />
-        <KpiCard value={enUso}        label="En Uso"             color="amber"  icon={<Users size={20}/>} />
-        <KpiCard value={lista}        label="Disponibles"        color="green"  icon={<Package size={20}/>} />
-        <KpiCard value={nuevo}        label="Nuevos en Caja"     color="purple" icon={<Warehouse size={20}/>} />
-        <KpiCard value={revision}     label="Revisión / No Lista" color="pink"  icon={<AlertCircle size={20}/>} />
+        <KpiCard value={todos.length} label="Total Equipos"       color="cyan"   icon={<Laptop size={20}/>}
+          onClick={() => nav({})} />
+        <KpiCard value={enUso}        label="En Uso"              color="amber"  icon={<Users size={20}/>}
+          onClick={() => nav({ estadoIn: 'En uso agente,En uso TI' })} />
+        <KpiCard value={lista}        label="Disponibles"         color="green"  icon={<Package size={20}/>}
+          onClick={() => nav({ estado: 'LISTA' })} />
+        <KpiCard value={nuevo}        label="Nuevos en Caja"      color="purple" icon={<Warehouse size={20}/>}
+          onClick={() => nav({ estado: 'NUEVO' })} />
+        <KpiCard value={revision}     label="Revisión / No Lista" color="pink"   icon={<AlertCircle size={20}/>}
+          onClick={() => nav({ estadoIn: 'REVISION,NO LISTA' })} />
       </div>
 
       {/* Fila 1: Estado + Piso + RAM */}
@@ -138,10 +145,11 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={byEstado} dataKey="value" nameKey="name"
-                cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}>
+                cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}
+                onClick={(e) => e.name !== 'Sin estado' && nav({ estado: e.name })}
+                style={{ cursor: 'pointer' }}>
                 {byEstado.map((e, i) => (
-                  <Cell key={i} fill={ESTADO_COLORS[e.name] || '#334155'}
-                    stroke="transparent" />
+                  <Cell key={i} fill={ESTADO_COLORS[e.name] || '#334155'} stroke="transparent" />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -153,13 +161,15 @@ export default function Dashboard() {
         <div className="dash-card card">
           <h3 className="dash-card-title">Equipos por piso</h3>
           <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
+            <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}
+              onClick={(e) => e?.activePayload?.[0] && nav({ piso: e.activePayload[0].payload.piso })}
+              style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
               <XAxis dataKey="piso" tick={{ fontSize: 11, fill: '#3a6a88' }}
                 axisLine={{ stroke: 'rgba(0,229,255,0.1)' }} tickLine={false} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3a6a88' }}
                 axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
               <Bar dataKey="total" name="Equipos" radius={[4, 4, 0, 0]} maxBarSize={40}>
                 {byPiso.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
@@ -175,10 +185,11 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={byRam} dataKey="value" nameKey="name"
-                cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}>
+                cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}
+                onClick={(e) => nav({ ram: e.name })}
+                style={{ cursor: 'pointer' }}>
                 {byRam.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i]}
-                    stroke="transparent" />
+                  <Cell key={i} fill={CHART_COLORS[i]} stroke="transparent" />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -196,7 +207,9 @@ export default function Dashboard() {
           <h3 className="dash-card-title">Modelos de equipos</h3>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byModelo} layout="vertical"
-              margin={{ top: 4, right: 30, left: 10, bottom: 4 }}>
+              margin={{ top: 4, right: 30, left: 10, bottom: 4 }}
+              onClick={(e) => e?.activePayload?.[0] && nav({ modelo: e.activePayload[0].payload.modelo })}
+              style={{ cursor: 'pointer' }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" horizontal={false} />
               <XAxis type="number" allowDecimals={false}
                 tick={{ fontSize: 11, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
@@ -212,7 +225,8 @@ export default function Dashboard() {
 
         <div className="dash-card card">
           <h3 className="dash-card-title">Accesorios asignados</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <p className="dash-card-hint">Click en verde para ver equipos con accesorio</p>
+          <ResponsiveContainer width="100%" height={200}>
             <BarChart data={accesorios} margin={{ top: 4, right: 20, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
               <XAxis dataKey="nombre" tick={{ fontSize: 12, fill: '#94a3b8' }}
@@ -222,7 +236,8 @@ export default function Dashboard() {
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
               <Legend content={<CustomLegend />} />
               <Bar dataKey="si" name="Con accesorio" fill={C.green} radius={[4,4,0,0]}
-                stackId="a" style={{ filter: 'drop-shadow(0 0 4px rgba(0,230,118,0.35))' }} />
+                stackId="a" style={{ filter: 'drop-shadow(0 0 4px rgba(0,230,118,0.35))', cursor: 'pointer' }}
+                onClick={(data) => nav({ accesorio: data.campo })} />
               <Bar dataKey="no" name="Sin accesorio" fill="#0e2240" radius={[4,4,0,0]}
                 stackId="a" />
             </BarChart>
@@ -235,9 +250,9 @@ export default function Dashboard() {
   );
 }
 
-function KpiCard({ value, label, color, icon }) {
+function KpiCard({ value, label, color, icon, onClick }) {
   return (
-    <div className={`kpi-card kpi-${color}`}>
+    <div className={`kpi-card kpi-${color}`} onClick={onClick} style={{ cursor: 'pointer' }}>
       <div className="kpi-icon">{icon}</div>
       <span className="kpi-num">{value}</span>
       <span className="kpi-label">{label}</span>
