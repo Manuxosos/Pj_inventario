@@ -68,7 +68,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     setDeleting(null);
   };
 
-  const enUso   = todos.filter(e => e.estado === 'En uso agente' || e.estado === 'En uso TI').length;
+  const enUso   = todos.filter(e => e.estado === 'En uso').length;
   const enBodega = todos.filter(e => e.piso === 'BODEGA').length;
 
   return (
