@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from '../api';
 import { UserPlus, Pencil, Trash2, ShieldCheck, Wrench, Eye } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import './Usuarios.css';
 
 const ROL_LABEL = { admin: 'Admin', it: 'IT', observador: 'Observador' };
@@ -10,9 +11,10 @@ const emptyForm = { nombre: '', usuario: '', password: '', rol: 'it', activo: tr
 
 export default function Usuarios({ miId }) {
   const [usuarios, setUsuarios] = useState([]);
-  const [modal, setModal]       = useState(null); // null | { mode: 'create' | 'edit', data }
-  const [loading, setLoading]   = useState(true);
-  const [deleting, setDeleting] = useState(null);
+  const [modal, setModal]         = useState(null);
+  const [loading, setLoading]     = useState(true);
+  const [deleting, setDeleting]   = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, nombre }
 
   const cargar = () => {
     setLoading(true);
@@ -21,11 +23,12 @@ export default function Usuarios({ miId }) {
 
   useEffect(() => { cargar(); }, []);
 
-  const handleDelete = async (u) => {
-    if (!confirm(`¿Eliminar usuario "${u.nombre}"?`)) return;
-    setDeleting(u.id);
-    await deleteUsuario(u.id);
-    setUsuarios(prev => prev.filter(x => x.id !== u.id));
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(confirmDelete.id);
+    setConfirmDelete(null);
+    await deleteUsuario(confirmDelete.id);
+    setUsuarios(prev => prev.filter(x => x.id !== confirmDelete.id));
     setDeleting(null);
   };
 
@@ -85,7 +88,7 @@ export default function Usuarios({ miId }) {
                       className="btn btn-ghost btn-sm danger-btn"
                       title="Eliminar"
                       disabled={u.id === miId || deleting === u.id}
-                      onClick={() => handleDelete(u)}
+                      onClick={() => setConfirmDelete({ id: u.id, nombre: u.nombre })}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -103,6 +106,15 @@ export default function Usuarios({ miId }) {
           data={modal.data}
           onClose={() => setModal(null)}
           onSaved={() => { setModal(null); cargar(); }}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Eliminar usuario"
+          message={`¿Estás seguro de que querés eliminar al usuario "${confirmDelete.nombre}"? Esta acción no se puede deshacer.`}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
         />
       )}
     </div>
