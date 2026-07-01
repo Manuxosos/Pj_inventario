@@ -84,12 +84,9 @@ export default function App() {
       <header className="app-header">
         <div className="header-inner">
 
-          <div className="header-brand">
+          <div className="header-brand" onClick={() => setTab('dashboard')} style={{ cursor: 'pointer' }}>
             <Monitor size={26} color="#60a5fa" />
-            <div>
-              <h1>Inventario IT</h1>
-              <span className="header-sub">Edificio Principal</span>
-            </div>
+            <h1>Inventario IT</h1>
           </div>
 
           <nav className="header-nav">
