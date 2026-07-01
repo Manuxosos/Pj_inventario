@@ -86,7 +86,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
     try {
       if (mode === 'edit') await updateEquipo(equipo.id, form);
       else await createEquipo(form);
-      onSaved();
+      onSaved(mode === 'edit' ? 'Equipo actualizado correctamente' : 'Equipo creado correctamente');
     } catch (err) {
       setError(err.response?.data?.error || 'Error al guardar.');
       setSaving(false);
