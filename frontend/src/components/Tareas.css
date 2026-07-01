@@ -1,0 +1,126 @@
+.tareas-page { padding: 0; }
+
+.tareas-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.tareas-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  margin: 0 0 4px;
+  text-shadow: 0 0 12px rgba(0,245,255,0.35);
+}
+
+.tareas-sub { font-size: 13px; color: var(--text-muted); }
+
+/* ── Kanban ── */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.kanban-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kanban-col-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.kanban-count {
+  margin-left: auto;
+  background: rgba(255,255,255,0.1);
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.est-pending { background: rgba(255,184,0,0.12); color: var(--neon-amber);  border: 1px solid rgba(255,184,0,0.25); }
+.est-active  { background: rgba(0,245,255,0.10); color: var(--neon-cyan);   border: 1px solid rgba(0,245,255,0.25); }
+.est-done    { background: rgba(0,255,157,0.10); color: var(--neon-green);  border: 1px solid rgba(0,255,157,0.25); }
+.est-cancel  { background: rgba(255,61,127,0.10); color: var(--neon-pink); border: 1px solid rgba(255,61,127,0.25); }
+
+.kanban-cards { display: flex; flex-direction: column; gap: 10px; }
+
+.kanban-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+  opacity: 0.5;
+}
+
+/* ── Tarea card ── */
+.tarea-card {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: border-color 0.2s, transform 0.15s;
+}
+.tarea-card:hover { border-color: rgba(0,245,255,0.2); transform: translateY(-1px); }
+
+.tarea-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tarea-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.tarea-actions { display: flex; gap: 4px; flex-shrink: 0; }
+
+.tarea-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.tarea-meta { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tarea-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(58,106,136,0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(58,106,136,0.2);
+}
+
+.tarea-tag-blue {
+  background: rgba(0,245,255,0.08);
+  color: var(--neon-cyan);
+  border-color: rgba(0,245,255,0.2);
+}
+
+.tarea-fecha {
+  font-size: 10px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}

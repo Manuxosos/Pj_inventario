@@ -41,6 +41,15 @@ const EQUIPO_FIELDS   = [
   'adaptador_tplink','estuche','piso',
 ];
 
+const CAMPO_LABEL = {
+  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Team / Agente',
+  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
+  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº de Serie',
+  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
+  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
+  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche', piso:'Piso',
+};
+
 // ── Login (público) ───────────────────────────────────────────────────────────
 app.post('/api/login', async (req, res) => {
   try {
@@ -110,7 +119,14 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
       `INSERT INTO equipos (${EQUIPO_FIELDS.join(',')}) VALUES (${placeholders}) RETURNING id`,
       vals
     );
-    res.status(201).json({ id: rows[0].id });
+    const newId = rows[0].id;
+    const label = req.body.id_activo || req.body.numero_serie || String(newId);
+    await pool.query(
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
+       VALUES ($1,$2,$3,$4,'creacion','','Equipo registrado')`,
+      [newId, label, req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.status(201).json({ id: newId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -119,6 +135,9 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
 // PUT /api/equipos/:id — solo admin e IT
 app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
+    const { rows: [old] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
+    if (!old) return res.status(404).json({ error: 'No encontrado' });
+
     const vals = EQUIPO_FIELDS.map(f => {
       const v = req.body[f] ?? '';
       return (f === 'numero_serie' && v === '') ? null : v;
@@ -126,6 +145,21 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
     vals.push(req.params.id);
     const sets = EQUIPO_FIELDS.map((f, i) => `${f} = $${i + 1}`).join(', ');
     await pool.query(`UPDATE equipos SET ${sets} WHERE id = $${EQUIPO_FIELDS.length + 1}`, vals);
+
+    // Registrar cambios en historial
+    const label = old.id_activo || old.numero_serie || req.params.id;
+    for (let i = 0; i < EQUIPO_FIELDS.length; i++) {
+      const campo = EQUIPO_FIELDS[i];
+      const ant   = String(old[campo] ?? '');
+      const nuevo = String(vals[i] ?? '');
+      if (ant !== nuevo) {
+        await pool.query(
+          `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario, campo, ant, nuevo]
+        );
+      }
+    }
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -217,6 +251,106 @@ app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="inventario_${new Date().toISOString().slice(0,10)}.xlsx"`);
     await wb.xlsx.write(res);
     res.end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Historial de equipos ──────────────────────────────────────────────────────
+app.get('/api/historial', async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 100, 200);
+    const { rows } = await pool.query(
+      `SELECT h.*, e.piso AS equipo_piso
+       FROM historial_equipos h
+       LEFT JOIN equipos e ON e.id = h.equipo_id
+       ORDER BY h.created_at DESC LIMIT $1`,
+      [limit]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/historial/equipo/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'SELECT * FROM historial_equipos WHERE equipo_id = $1 ORDER BY created_at DESC',
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/historial/:id/nota', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    await pool.query('UPDATE historial_equipos SET nota = $1 WHERE id = $2', [req.body.nota || '', req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Tareas IT ─────────────────────────────────────────────────────────────────
+app.get('/api/tareas', async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM tareas ORDER BY created_at DESC');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { titulo, descripcion, estado, piso, asignado_id, asignado_nombre } = req.body;
+    if (!titulo) return res.status(400).json({ error: 'El título es obligatorio' });
+    const { rows } = await pool.query(
+      `INSERT INTO tareas (titulo, descripcion, estado, piso, asignado_id, asignado_nombre, creado_id, creado_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [titulo, descripcion || '', estado || 'Pendiente', piso || '',
+       asignado_id || null, asignado_nombre || '',
+       req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/tareas/:id', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { titulo, descripcion, estado, piso, asignado_id, asignado_nombre } = req.body;
+    await pool.query(
+      `UPDATE tareas SET titulo=$1, descripcion=$2, estado=$3, piso=$4, asignado_id=$5, asignado_nombre=$6
+       WHERE id=$7`,
+      [titulo, descripcion || '', estado, piso || '', asignado_id || null, asignado_nombre || '', req.params.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
+  try {
+    await pool.query('DELETE FROM tareas WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Usuarios asignables (para dropdown de tareas) ─────────────────────────────
+app.get('/api/usuarios/asignables', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT id, nombre, usuario, rol FROM usuarios WHERE activo = true AND rol IN ('admin','it') ORDER BY nombre"
+    );
+    res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

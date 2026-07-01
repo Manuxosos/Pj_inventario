@@ -1,0 +1,157 @@
+.actividad-page { padding: 0; }
+
+.actividad-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.actividad-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  margin: 0 0 4px;
+  text-shadow: 0 0 12px rgba(0,245,255,0.35);
+}
+
+.actividad-sub { font-size: 13px; color: var(--text-muted); }
+
+/* ── Feed ── */
+.actividad-feed { padding: 0; overflow: hidden; }
+
+.feed-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 20px;
+  position: relative;
+  transition: background 0.15s;
+}
+.feed-item:hover { background: rgba(0,245,255,0.02); }
+.feed-item-border { border-bottom: 1px solid var(--border); }
+
+.feed-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 6px var(--neon-cyan);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+.feed-content { flex: 1; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+
+.feed-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.feed-equipo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+.feed-piso {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(58,106,136,0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(58,106,136,0.2);
+}
+
+.feed-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.feed-cambio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+
+.feed-campo {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.feed-ant {
+  color: var(--neon-pink);
+  background: rgba(255,61,127,0.08);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-arrow { color: var(--text-muted); }
+
+.feed-nuevo {
+  color: var(--neon-green);
+  background: rgba(0,255,157,0.08);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.feed-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.feed-usuario {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.feed-nota {
+  font-size: 11px;
+  color: var(--neon-amber);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+/* ── Botón nota ── */
+.btn-nota {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.btn-nota:hover {
+  color: var(--neon-amber);
+  border-color: rgba(255,184,0,0.3);
+  background: rgba(255,184,0,0.06);
+}
+.btn-nota-filled {
+  color: var(--neon-amber);
+  border-color: rgba(255,184,0,0.25);
+  background: rgba(255,184,0,0.06);
+}
