@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getEquipos } from '../api';
+import { getEquipos, getHistorial } from '../api';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
@@ -54,18 +54,38 @@ const CustomLegend = ({ payload }) => (
   </ul>
 );
 
-// Normaliza un valor de RAM para agrupar "8 GB", "8GB", "8gb" como el mismo
+const CAMPO_LABEL = {
+  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Agente',
+  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
+  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº Serie',
+  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
+  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
+  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
+  piso:'Piso', creacion:'Creación',
+};
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+  });
+}
+
+// Normaliza RAM: elimina todos los espacios y pone en mayúsculas
+// "8 GB" y "8GB" y "8gb" → "8GB"
 function normRam(raw) {
   if (!raw) return '';
-  return raw.trim().replace(/\s+/g, ' ').toUpperCase();
+  return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
 export default function Dashboard({ onNavigate }) {
-  const [todos, setTodos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [todos,     setTodos]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [actividad, setActividad] = useState([]);
 
   useEffect(() => {
     getEquipos().then(d => { setTodos(d); setLoading(false); });
+    getHistorial(15).then(setActividad).catch(() => {});
   }, []);
 
   if (loading) return <div className="dash-loading">Cargando dashboard...</div>;
@@ -206,18 +226,20 @@ export default function Dashboard({ onNavigate }) {
 
       </div>
 
-      {/* Fila 2: Modelos — ancho completo */}
-      <div className="dash-row-full">
+      {/* Fila 2: Modelos + Actividad reciente */}
+      <div className="dash-row-modelos-act">
+
+        {/* Modelos */}
         <div className="dash-card card">
           <h3 className="dash-card-title">Modelos de equipos</h3>
           <p className="dash-card-hint">Click en una barra para ver esos equipos en el inventario</p>
-          <ResponsiveContainer width="100%" height={260}>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={byModelo} layout="vertical"
-              margin={{ top: 4, right: 40, left: 10, bottom: 4 }}>
+              margin={{ top: 4, right: 30, left: 10, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" horizontal={false} />
               <XAxis type="number" allowDecimals={false}
                 tick={{ fontSize: 11, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
-              <YAxis dataKey="modelo" type="category" width={170}
+              <YAxis dataKey="modelo" type="category" width={155}
                 tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
               <Bar dataKey="total" name="Equipos" radius={[0, 4, 4, 0]} maxBarSize={22}
@@ -231,6 +253,42 @@ export default function Dashboard({ onNavigate }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        {/* Actividad reciente */}
+        <div className="dash-card card dash-actividad-card">
+          <h3 className="dash-card-title">Actividad reciente</h3>
+          {actividad.length === 0 ? (
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', padding: '12px 0' }}>Sin actividad registrada aún.</p>
+          ) : (
+            <div className="dash-feed">
+              {actividad.map((h, i) => (
+                <div key={h.id} className={`dash-feed-item ${i < actividad.length - 1 ? 'dash-feed-border' : ''}`}>
+                  <span className="dash-feed-dot" />
+                  <div className="dash-feed-content">
+                    <div className="dash-feed-top">
+                      <span className="dash-feed-equipo">{h.equipo_label || `Equipo #${h.equipo_id}`}</span>
+                      {h.equipo_piso && <span className="dash-feed-piso">{h.equipo_piso}</span>}
+                      <span className="dash-feed-time">{fmtDate(h.created_at)}</span>
+                    </div>
+                    {h.campo === 'creacion' ? (
+                      <span style={{ fontSize: 12, color: 'var(--neon-green)' }}>{h.valor_nuevo}</span>
+                    ) : (
+                      <div className="dash-feed-cambio">
+                        <span className="dash-feed-campo">{CAMPO_LABEL[h.campo] || h.campo}:</span>
+                        <span className="dash-feed-ant">{h.valor_ant || '—'}</span>
+                        <span style={{ color: 'var(--text-muted)' }}>→</span>
+                        <span className="dash-feed-nuevo">{h.valor_nuevo || '—'}</span>
+                      </div>
+                    )}
+                    {h.nota && <span className="dash-feed-nota">"{h.nota}"</span>}
+                    <span className="dash-feed-usuario">por {h.usuario_nombre}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
 
     </div>

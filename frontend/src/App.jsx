@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, Activity, Download, PlusCircle, Monitor, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
 import Usuarios from './components/Usuarios';
 import Tareas from './components/Tareas';
-import Actividad from './components/Actividad';
 import Login from './components/Login';
 import { exportarExcel } from './api';
 import './App.css';
@@ -103,9 +102,6 @@ export default function App() {
             <button className={`nav-tab ${tab === 'tareas' ? 'active' : ''}`} onClick={() => setTab('tareas')}>
               <CheckSquare size={15} /> Tareas
             </button>
-            <button className={`nav-tab ${tab === 'actividad' ? 'active' : ''}`} onClick={() => setTab('actividad')}>
-              <Activity size={15} /> Actividad
-            </button>
             {esAdmin && (
               <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => setTab('usuarios')}>
                 <Users size={15} /> Usuarios
@@ -151,9 +147,8 @@ export default function App() {
             onView={(equipo) => setModal({ mode: 'view', equipo })}
           />
         )}
-        {tab === 'tareas'    && <Tareas rol={rol} />}
-        {tab === 'actividad' && <Actividad rol={rol} />}
-        {tab === 'usuarios'  && esAdmin && <Usuarios miId={userInfo?.id} />}
+        {tab === 'tareas'   && <Tareas rol={rol} />}
+        {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
       </main>
 
       {modal && (

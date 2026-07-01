@@ -424,7 +424,7 @@ app.delete('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
 const DIST = path.join(__dirname, 'frontend', 'dist');
 if (fs.existsSync(DIST)) {
   app.use(express.static(DIST));
-  app.get('*', (req, res) => res.sendFile(path.join(DIST, 'index.html')));
+  app.get('/{*splat}', (req, res) => res.sendFile(path.join(DIST, 'index.html')));
 }
 
 // ── Arrancar servidor ─────────────────────────────────────────────────────────
