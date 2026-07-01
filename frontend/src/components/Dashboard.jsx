@@ -4,7 +4,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import { Laptop, Users, Package, Warehouse, AlertCircle } from 'lucide-react';
+import { Laptop, Users, Package, AlertCircle } from 'lucide-react';
 import './Dashboard.css';
 
 const C = {
@@ -94,7 +94,6 @@ export default function Dashboard({ onNavigate }) {
 
   const enUso    = count(e => e.estado === 'En uso agente' || e.estado === 'En uso TI');
   const lista    = count(e => e.estado === 'LISTA');
-  const nuevo    = count(e => e.estado === 'NUEVO');
   const revision = count(e => e.estado === 'NO LISTA' || e.estado === 'REVISION');
 
   // Estados
@@ -152,8 +151,6 @@ export default function Dashboard({ onNavigate }) {
           onClick={() => nav({ estadoIn: 'En uso agente,En uso TI' })} />
         <KpiCard value={lista}        label="Disponibles"         color="green"  icon={<Package size={20}/>}
           onClick={() => nav({ estado: 'LISTA' })} />
-        <KpiCard value={nuevo}        label="Nuevos en Caja"      color="purple" icon={<Warehouse size={20}/>}
-          onClick={() => nav({ estado: 'NUEVO' })} />
         <KpiCard value={revision}     label="Revisión / No Lista" color="pink"   icon={<AlertCircle size={20}/>}
           onClick={() => nav({ estadoIn: 'REVISION,NO LISTA' })} />
       </div>
