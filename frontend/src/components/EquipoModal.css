@@ -100,3 +100,48 @@
 }
 
 textarea.form-input { resize: vertical; }
+
+/* ── Historial dentro del modal ── */
+.historial-list { display: flex; flex-direction: column; gap: 10px; }
+
+.historial-item {
+  padding: 10px 12px;
+  background: var(--surface2);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.historial-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.historial-campo { font-size: 12px; font-weight: 700; color: var(--text); }
+.historial-time  { font-size: 10px; color: var(--text-muted); }
+
+.historial-cambio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.historial-ant   { color: var(--neon-pink);  background: rgba(255,61,127,0.08); padding: 1px 7px; border-radius: 4px; }
+.historial-arrow { color: var(--text-muted); }
+.historial-nuevo { color: var(--neon-green); background: rgba(0,255,157,0.08);  padding: 1px 7px; border-radius: 4px; }
+
+.historial-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.historial-usuario { font-size: 10px; color: var(--text-muted); }
+.historial-nota    { font-size: 11px; color: var(--neon-amber); font-style: italic; }

@@ -1,6 +1,23 @@
 import { useState, useEffect } from 'react';
-import { createEquipo, updateEquipo } from '../api';
+import { createEquipo, updateEquipo, getHistorialEquipo, updateNota } from '../api';
+import { MessageSquare, MessageSquarePlus } from 'lucide-react';
 import './EquipoModal.css';
+
+const CAMPO_LABEL = {
+  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Team / Agente',
+  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
+  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº de Serie',
+  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
+  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
+  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
+  piso:'Piso', creacion:'Creación',
+};
+
+function fmtDate(iso) {
+  return new Date(iso).toLocaleString('es-CL', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+}
 
 const FIELDS = [
   { key: 'id_activo', label: 'ID Activo', group: 'general' },
@@ -34,11 +51,26 @@ const GROUPS = [
 
 const empty = () => Object.fromEntries(FIELDS.map(f => [f.key, '']));
 
-export default function EquipoModal({ mode, equipo, onClose, onSaved }) {
-  const [form, setForm] = useState(equipo ? { ...equipo } : empty());
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
+  const [form,      setForm]      = useState(equipo ? { ...equipo } : empty());
+  const [saving,    setSaving]    = useState(false);
+  const [error,     setError]     = useState('');
+  const [historial, setHistorial] = useState([]);
+  const [notaEdit,  setNotaEdit]  = useState(null); // { id, nota }
   const isView = mode === 'view';
+  const puedeNota = rol === 'admin' || rol === 'it';
+
+  useEffect(() => {
+    if (isView && equipo?.id) {
+      getHistorialEquipo(equipo.id).then(setHistorial);
+    }
+  }, [isView, equipo?.id]);
+
+  const handleGuardarNota = async (hId, nota) => {
+    await updateNota(hId, nota);
+    setHistorial(prev => prev.map(e => e.id === hId ? { ...e, nota } : e));
+    setNotaEdit(null);
+  };
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose(); };
@@ -62,6 +94,34 @@ export default function EquipoModal({ mode, equipo, onClose, onSaved }) {
   };
 
   const title = { create: 'Nuevo Equipo', edit: 'Editar Equipo', view: 'Detalle del Equipo' }[mode];
+
+  if (notaEdit) return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setNotaEdit(null)}>
+      <div className="modal-box" style={{ maxWidth: 420 }}>
+        <div className="modal-header">
+          <h2>{notaEdit.nota ? 'Editar nota' : 'Agregar nota'}</h2>
+          <button className="modal-close" onClick={() => setNotaEdit(null)}>✕</button>
+        </div>
+        <div className="modal-body">
+          <section className="form-section">
+            <div className="form-group">
+              <label className="form-label">Nota sobre este cambio</label>
+              <textarea className="form-input" rows={4} autoFocus
+                value={notaEdit.nota}
+                onChange={e => setNotaEdit(n => ({ ...n, nota: e.target.value }))}
+                placeholder="Ej: Pepito dejó la empresa, Juanito toma el equipo..." />
+            </div>
+          </section>
+          <div className="modal-footer">
+            <button className="btn btn-secondary" onClick={() => setNotaEdit(null)}>Cancelar</button>
+            <button className="btn btn-primary" onClick={() => handleGuardarNota(notaEdit.id, notaEdit.nota)}>
+              Guardar nota
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -112,6 +172,47 @@ export default function EquipoModal({ mode, equipo, onClose, onSaved }) {
               </section>
             );
           })}
+
+          {/* Historial — solo en modo vista */}
+          {isView && (
+            <section className="form-section">
+              <h3 className="section-title">Historial de cambios</h3>
+              {historial.length === 0 ? (
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0' }}>Sin cambios registrados.</p>
+              ) : (
+                <div className="historial-list">
+                  {historial.map(h => (
+                    <div key={h.id} className="historial-item">
+                      <div className="historial-top">
+                        <span className="historial-campo">{CAMPO_LABEL[h.campo] || h.campo}</span>
+                        <span className="historial-time">{fmtDate(h.created_at)}</span>
+                      </div>
+                      {h.campo !== 'creacion' ? (
+                        <div className="historial-cambio">
+                          <span className="historial-ant">{h.valor_ant || '—'}</span>
+                          <span className="historial-arrow">→</span>
+                          <span className="historial-nuevo">{h.valor_nuevo || '—'}</span>
+                        </div>
+                      ) : (
+                        <span className="historial-nuevo" style={{ fontSize: 12 }}>{h.valor_nuevo}</span>
+                      )}
+                      <div className="historial-footer">
+                        <span className="historial-usuario">por {h.usuario_nombre}</span>
+                        {h.nota && <span className="historial-nota">"{h.nota}"</span>}
+                        {puedeNota && (
+                          <button className={`btn-nota ${h.nota ? 'btn-nota-filled' : ''}`}
+                            onClick={() => setNotaEdit({ id: h.id, nota: h.nota || '' })}>
+                            {h.nota ? <MessageSquare size={11} /> : <MessageSquarePlus size={11} />}
+                            {h.nota ? 'Editar nota' : 'Agregar nota'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           {error && <div className="form-error">{error}</div>}
 

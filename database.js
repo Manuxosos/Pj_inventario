@@ -70,6 +70,50 @@ async function initSchema() {
     END $$
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS historial_equipos (
+      id             SERIAL PRIMARY KEY,
+      equipo_id      INTEGER REFERENCES equipos(id) ON DELETE CASCADE,
+      equipo_label   TEXT DEFAULT '',
+      usuario_id     INTEGER,
+      usuario_nombre TEXT DEFAULT '',
+      campo          TEXT NOT NULL,
+      valor_ant      TEXT DEFAULT '',
+      valor_nuevo    TEXT DEFAULT '',
+      nota           TEXT DEFAULT '',
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tareas (
+      id              SERIAL PRIMARY KEY,
+      titulo          TEXT NOT NULL,
+      descripcion     TEXT DEFAULT '',
+      estado          TEXT NOT NULL DEFAULT 'Pendiente'
+                      CHECK (estado IN ('Pendiente','En curso','Finalizado','Cancelado')),
+      piso            TEXT DEFAULT '',
+      asignado_id     INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+      asignado_nombre TEXT DEFAULT '',
+      creado_id       INTEGER,
+      creado_nombre   TEXT DEFAULT '',
+      created_at      TIMESTAMPTZ DEFAULT NOW(),
+      updated_at      TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_tareas_updated_at'
+      ) THEN
+        CREATE TRIGGER trg_tareas_updated_at
+        BEFORE UPDATE ON tareas
+        FOR EACH ROW EXECUTE FUNCTION fn_set_updated_at();
+      END IF;
+    END $$
+  `);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {
