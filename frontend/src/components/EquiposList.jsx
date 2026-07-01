@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getEquipos, getOpciones, deleteEquipo } from '../api';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import './EquiposList.css';
 
 const ESTADOS = ['En uso agente', 'En uso TI', 'NO LISTA', 'LISTA', 'REVISION', 'NUEVO'];
@@ -34,6 +35,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   });
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, label }
 
   // Cargar totales globales (sin filtros) para los stats
   useEffect(() => {
@@ -58,12 +60,13 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     });
   }, [refresh, filters]);
 
-  const handleDelete = async (id, idActivo) => {
-    if (!confirm(`¿Eliminar equipo ${idActivo}?`)) return;
-    setDeleting(id);
-    await deleteEquipo(id);
-    setEquipos(e => e.filter(x => x.id !== id));
-    setTodos(e => e.filter(x => x.id !== id));
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(confirmDelete.id);
+    setConfirmDelete(null);
+    await deleteEquipo(confirmDelete.id);
+    setEquipos(e => e.filter(x => x.id !== confirmDelete.id));
+    setTodos(e => e.filter(x => x.id !== confirmDelete.id));
     setDeleting(null);
   };
 
@@ -175,7 +178,9 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
                       <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar"><Pencil size={14}/></button>
                     )}
                     {puedeEditar && (
-                      <button className="btn btn-ghost btn-sm danger-btn" onClick={() => handleDelete(eq.id, eq.id_activo)} disabled={deleting === eq.id} title="Eliminar"><Trash2 size={14}/></button>
+                      <button className="btn btn-ghost btn-sm danger-btn"
+                        onClick={() => setConfirmDelete({ id: eq.id, label: eq.id_activo || eq.marca_modelo || `Equipo #${eq.id}` })}
+                        disabled={deleting === eq.id} title="Eliminar"><Trash2 size={14}/></button>
                     )}
                   </td>
                 </tr>
@@ -184,6 +189,15 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           </table>
         )}
       </div>
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="Eliminar equipo"
+          message={`¿Estás seguro de que querés eliminar el equipo "${confirmDelete.label}"? Esta acción no se puede deshacer.`}
+          onConfirm={handleDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }
