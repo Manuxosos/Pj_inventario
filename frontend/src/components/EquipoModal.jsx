@@ -26,7 +26,7 @@ const FIELDS = [
   { key: 'team', label: 'Agente / Team', group: 'general' },
   { key: 'responsable', label: 'Responsable IT', group: 'general' },
   { key: 'estado', label: 'Estado', group: 'general', type: 'select',
-    options: ['En uso agente', 'En uso TI', 'NO LISTA', 'LISTA', 'REVISION', 'NUEVO'] },
+    options: ['En uso', 'Disponible', 'En revisión', 'De baja'] },
   { key: 'marca_modelo', label: 'Marca / Modelo', group: 'specs' },
   { key: 'procesador', label: 'Procesador', group: 'specs' },
   { key: 'ram', label: 'RAM', group: 'specs' },
