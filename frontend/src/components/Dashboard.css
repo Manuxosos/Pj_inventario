@@ -93,6 +93,29 @@
   gap: 16px;
 }
 
+.dash-row-modelos-act {
+  display: grid;
+  grid-template-columns: 55fr 45fr;
+  gap: 16px;
+  align-items: start;
+}
+
+/* La card de actividad tiene altura máxima y scroll interno */
+.dash-actividad-card {
+  max-height: 380px;
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-actividad-card .dash-feed {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+.dash-actividad-card .dash-feed::-webkit-scrollbar { width: 4px; }
+.dash-actividad-card .dash-feed::-webkit-scrollbar-track { background: transparent; }
+.dash-actividad-card .dash-feed::-webkit-scrollbar-thumb { background: rgba(0,245,255,0.15); border-radius: 4px; }
+
 .dash-card {
   padding: 18px 16px 14px;
 }
@@ -154,4 +177,134 @@
 
 .kpi-card:hover .kpi-num {
   text-shadow: 0 0 20px currentColor;
+}
+
+/* ── Actividad reciente en dashboard ── */
+.dash-actividad-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dash-ver-todo {
+  font-size: 11px;
+  color: var(--neon-cyan);
+  background: transparent;
+  border: 1px solid rgba(0,245,255,0.2);
+  border-radius: 4px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.dash-ver-todo:hover {
+  background: rgba(0,245,255,0.06);
+}
+
+.dash-feed { display: flex; flex-direction: column; }
+
+.dash-feed-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+}
+.dash-feed-border { border-bottom: 1px solid var(--border); }
+
+.dash-feed-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  box-shadow: 0 0 5px var(--neon-cyan);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.dash-feed-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.dash-feed-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dash-feed-equipo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+.dash-feed-piso {
+  font-size: 10px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(58,106,136,0.15);
+  color: var(--text-muted);
+  border: 1px solid rgba(58,106,136,0.2);
+}
+
+.dash-feed-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.dash-feed-cambio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.dash-feed-campo {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dash-feed-ant {
+  color: var(--neon-pink);
+  background: rgba(255,61,127,0.08);
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-feed-nuevo {
+  color: var(--neon-green);
+  background: rgba(0,255,157,0.08);
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dash-feed-nota {
+  font-size: 10px;
+  color: var(--neon-amber);
+  font-style: italic;
+  opacity: 0.85;
+}
+
+.dash-feed-usuario {
+  font-size: 10px;
+  color: var(--text-muted);
 }
