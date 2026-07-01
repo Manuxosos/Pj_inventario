@@ -18,13 +18,11 @@ const C = {
 };
 
 const ESTADO_COLORS = {
-  'En uso agente': C.cyan,
-  'En uso TI':     C.blue,
-  'LISTA':         C.green,
-  'NO LISTA':      C.pink,
-  'REVISION':      C.amber,
-  'NUEVO':         C.purple,
-  'Sin estado':    '#334155',
+  'En uso':      C.cyan,
+  'Disponible':  C.green,
+  'En revisión': C.amber,
+  'De baja':     C.pink,
+  'Sin estado':  '#334155',
 };
 
 const CHART_COLORS = [C.cyan, C.green, C.amber, C.purple, C.pink, C.blue, C.orange];
@@ -92,9 +90,9 @@ export default function Dashboard({ onNavigate }) {
 
   const count = fn => todos.filter(fn).length;
 
-  const enUso    = count(e => e.estado === 'En uso agente' || e.estado === 'En uso TI');
-  const lista    = count(e => e.estado === 'LISTA');
-  const revision = count(e => e.estado === 'NO LISTA' || e.estado === 'REVISION');
+  const enUso    = count(e => e.estado === 'En uso');
+  const lista    = count(e => e.estado === 'Disponible');
+  const revision = count(e => e.estado === 'En revisión');
 
   // Estados
   const byEstado = Object.entries(
@@ -147,12 +145,12 @@ export default function Dashboard({ onNavigate }) {
       <div className="kpi-row">
         <KpiCard value={todos.length} label="Total Equipos"       color="cyan"   icon={<Laptop size={20}/>}
           onClick={() => nav({})} />
-        <KpiCard value={enUso}        label="En Uso"              color="amber"  icon={<Users size={20}/>}
-          onClick={() => nav({ estadoIn: 'En uso agente,En uso TI' })} />
-        <KpiCard value={lista}        label="Disponibles"         color="green"  icon={<Package size={20}/>}
-          onClick={() => nav({ estado: 'LISTA' })} />
-        <KpiCard value={revision}     label="Revisión / No Lista" color="pink"   icon={<AlertCircle size={20}/>}
-          onClick={() => nav({ estadoIn: 'REVISION,NO LISTA' })} />
+        <KpiCard value={enUso}    label="En Uso"       color="amber"  icon={<Users size={20}/>}
+          onClick={() => nav({ estado: 'En uso' })} />
+        <KpiCard value={lista}    label="Disponibles"  color="green"  icon={<Package size={20}/>}
+          onClick={() => nav({ estado: 'Disponible' })} />
+        <KpiCard value={revision} label="En Revisión"  color="pink"   icon={<AlertCircle size={20}/>}
+          onClick={() => nav({ estado: 'En revisión' })} />
       </div>
 
       {/* Fila 1: Estado + Piso + RAM */}

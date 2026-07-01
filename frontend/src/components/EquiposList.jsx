@@ -4,15 +4,13 @@ import { Eye, Pencil, Trash2 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import './EquiposList.css';
 
-const ESTADOS = ['En uso agente', 'En uso TI', 'NO LISTA', 'LISTA', 'REVISION', 'NUEVO'];
+const ESTADOS = ['En uso', 'Disponible', 'En revisión', 'De baja'];
 
 const ESTADO_BADGE = {
-  'En uso agente': 'badge-blue',
-  'En uso TI':     'badge-blue',
-  'LISTA':         'badge-green',
-  'NO LISTA':      'badge-red',
-  'REVISION':      'badge-yellow',
-  'NUEVO':         'badge-purple',
+  'En uso':       'badge-blue',
+  'Disponible':   'badge-green',
+  'En revisión':  'badge-yellow',
+  'De baja':      'badge-red',
 };
 
 function getBadgeClass(estado) {
