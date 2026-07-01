@@ -7,6 +7,7 @@ import Usuarios from './components/Usuarios';
 import Tareas from './components/Tareas';
 import Login from './components/Login';
 import { exportarExcel } from './api';
+import Toast from './components/Toast';
 import './App.css';
 
 function getUserInfo() {
@@ -25,6 +26,7 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [refresh, setRefresh] = useState(0);
   const [dashboardFilter, setDashboardFilter] = useState(null);
+  const [toast, setToast] = useState(null); // { message, type }
 
   const userInfo = autenticado ? getUserInfo() : null;
   const rol      = userInfo?.rol || 'observador';
@@ -59,6 +61,7 @@ export default function App() {
         const writable = await handle.createWritable();
         await writable.write(blob);
         await writable.close();
+        showToast('Excel exportado correctamente');
       } catch (e) {
         if (e.name !== 'AbortError') {
           const url = URL.createObjectURL(blob);
@@ -67,16 +70,21 @@ export default function App() {
           a.download = `inventario_equipos_${fecha}.xlsx`;
           a.click();
           URL.revokeObjectURL(url);
+          showToast('Excel exportado correctamente');
         }
       }
     } catch (err) {
       console.error('Error exportando:', err);
+      showToast('Error al exportar', 'error');
     }
   };
 
-  const handleSaved = () => {
+  const showToast = (message, type = 'success') => setToast({ message, type });
+
+  const handleSaved = (msg = 'Guardado correctamente') => {
     setModal(null);
     setRefresh(r => r + 1);
+    showToast(msg);
   };
 
   return (
@@ -156,6 +164,10 @@ export default function App() {
           onClose={() => setModal(null)}
           onSaved={handleSaved}
         />
+      )}
+
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );
