@@ -12,5 +12,9 @@ Thumbs.db
 # Build del frontend
 frontend/dist/
 
+# Servicio de Windows (nssm.exe se descarga con servicio-instalar.bat)
+nssm.exe
+logs/
+
 # Configuracion local de Claude Code (especifica de cada maquina)
 .claude/settings.local.json

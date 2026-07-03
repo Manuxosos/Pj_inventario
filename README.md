@@ -45,6 +45,10 @@ El instalador hace todo automáticamente:
 
 La app abre automáticamente en `http://localhost:5173` (desarrollo) o `http://localhost:3001` (producción, si existe `frontend/dist`).
 
+### Modo servidor (recomendado para producción)
+
+Para que la app corra como **servicio de Windows** — arranca sola al encender el servidor, sin ventanas ni sesión iniciada, accesible desde toda la red — sigue la guía **[DESPLIEGUE.md](DESPLIEGUE.md)** y usa `servicio-instalar.bat` / `servicio-desinstalar.bat`.
+
 ---
 
 ## Roles de usuario
@@ -73,9 +77,12 @@ Pj_inventario/
 ├── seed_data.json      # Snapshot del inventario real
 ├── auth.js             # Login + JWT (incluye rol del usuario)
 ├── .env.example         # Plantilla de configuración
-├── iniciar.bat          # Iniciar servidores
-├── detener.bat          # Detener servidores
-└── instalar.bat         # Instalación inicial
+├── iniciar.bat          # Iniciar servidores (manual)
+├── detener.bat          # Detener servidores (manual)
+├── instalar.bat         # Instalación inicial
+├── servicio-instalar.bat    # Instalar como servicio de Windows (auto-arranque)
+├── servicio-desinstalar.bat # Quitar el servicio de Windows
+└── DESPLIEGUE.md        # Guía de despliegue en servidor
 ```
 
 ---
