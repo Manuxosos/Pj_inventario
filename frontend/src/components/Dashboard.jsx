@@ -95,7 +95,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
     const map = new Map();
     todos.forEach(e => {
       if (e.piso !== pisoSeleccionado) return;
-      const raw = ((e.team || '').trim()) || ((e.usuario || '').trim());
+      const raw = (e.responsable || '').trim();
       if (!raw) return;
       const key = raw.toUpperCase();
       if (!map.has(key)) map.set(key, raw);
