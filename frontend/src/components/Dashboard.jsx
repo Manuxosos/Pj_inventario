@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
 import { Laptop, Users, Package, AlertCircle } from 'lucide-react';
-import PisoSimModal from './PisoSimModal';
+import PisoAgentesModal from './PisoAgentesModal';
 import './Dashboard.css';
 
 const C = {
@@ -81,7 +81,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [actividad, setActividad] = useState([]);
-  const [pisoSim,   setPisoSim]   = useState(null);
+  const [pisoSeleccionado,   setPisoSeleccionado]   = useState(null);
 
   useEffect(() => {
     getEquipos().then(d => { setTodos(d); setLoading(false); });
@@ -89,19 +89,19 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
   }, []);
 
   const agentesPiso = useMemo(() => {
-    if (!pisoSim) return [];
+    if (!pisoSeleccionado) return [];
     // normalizado (mayúsculas) -> nombre a mostrar (primera aparición), para no
     // duplicar al mismo agente por diferencias de mayúsculas/minúsculas
     const map = new Map();
     todos.forEach(e => {
-      if (e.piso !== pisoSim) return;
+      if (e.piso !== pisoSeleccionado) return;
       const raw = ((e.team || '').trim()) || ((e.usuario || '').trim());
       if (!raw) return;
       const key = raw.toUpperCase();
       if (!map.has(key)) map.set(key, raw);
     });
     return [...map.values()].sort((a, b) => a.localeCompare(b, 'es'));
-  }, [pisoSim, todos]);
+  }, [pisoSeleccionado, todos]);
 
   if (loading) return <div className="dash-loading">Cargando dashboard...</div>;
 
@@ -195,7 +195,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
         {/* Piso */}
         <div className="dash-card card">
           <h3 className="dash-card-title">Equipos por piso</h3>
-          <p className="dash-card-hint">Click en una barra para ver la distribución de agentes</p>
+          <p className="dash-card-hint">Click en una barra para ver los agentes de ese piso</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
@@ -206,7 +206,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
               <Bar dataKey="total" name="Equipos" radius={[4, 4, 0, 0]} maxBarSize={40}
                 style={{ cursor: 'pointer' }}
-                onClick={(data) => setPisoSim(data.piso)}>
+                onClick={(data) => setPisoSeleccionado(data.piso)}>
                 {byPiso.map((_, i) => (
                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
                     style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}66)` }} />
@@ -306,8 +306,8 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
 
       </div>
 
-      {pisoSim && (
-        <PisoSimModal piso={pisoSim} agentes={agentesPiso} onClose={() => setPisoSim(null)} />
+      {pisoSeleccionado && (
+        <PisoAgentesModal piso={pisoSeleccionado} agentes={agentesPiso} onClose={() => setPisoSeleccionado(null)} />
       )}
 
     </div>
