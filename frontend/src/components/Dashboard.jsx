@@ -77,6 +77,17 @@ function normRam(raw) {
   return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
+// Valores usados como placeholder en Agente/Team para equipos en stock o de
+// uso interno de IT, que no representan a una persona real
+const AGENTE_PLACEHOLDERS = new Set(['BODEGA', 'TI', 'N/A', 'NA', '-', 'SIN ASIGNAR', 'STOCK', 'ALMACEN']);
+
+function nombreAgenteValido(raw) {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!trimmed || AGENTE_PLACEHOLDERS.has(trimmed.toUpperCase())) return null;
+  return trimmed;
+}
+
 export default function Dashboard({ onNavigate, onOpenEquipo }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -90,16 +101,19 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
 
   const agentesPiso = useMemo(() => {
     if (!pisoSim) return [];
-    const set = new Set();
+    // normalizado (mayúsculas) -> nombre a mostrar (primera aparición), para no
+    // duplicar al mismo agente por diferencias de mayúsculas/minúsculas
+    const map = new Map();
     todos.forEach(e => {
-      // Un agente cuenta si tiene algún equipo asignado en ese piso, sin importar
-      // el estado puntual de ESE equipo (puede tener monitor "Disponible" y laptop
-      // "En uso" a la vez). Solo se excluyen equipos dados de baja.
-      if (e.piso === pisoSim && e.estado !== 'De baja' && e.team && e.team.trim()) {
-        set.add(e.team.trim());
-      }
+      if (e.piso !== pisoSim || e.estado === 'De baja') return;
+      // Agente/Team es la fuente principal; si está vacío o es un placeholder
+      // ("BODEGA", "TI", etc. usados para equipos en stock) se usa Usuario asignado
+      const nombre = nombreAgenteValido(e.team) || nombreAgenteValido(e.usuario);
+      if (!nombre) return;
+      const key = nombre.toUpperCase();
+      if (!map.has(key)) map.set(key, nombre);
     });
-    return [...set].sort((a, b) => a.localeCompare(b, 'es'));
+    return [...map.values()].sort((a, b) => a.localeCompare(b, 'es'));
   }, [pisoSim, todos]);
 
   if (loading) return <div className="dash-loading">Cargando dashboard...</div>;
