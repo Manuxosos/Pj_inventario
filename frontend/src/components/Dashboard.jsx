@@ -77,17 +77,6 @@ function normRam(raw) {
   return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
-// Valores usados como placeholder en Agente/Team para equipos en stock o de
-// uso interno de IT, que no representan a una persona real
-const AGENTE_PLACEHOLDERS = new Set(['BODEGA', 'TI', 'N/A', 'NA', '-', 'SIN ASIGNAR', 'STOCK', 'ALMACEN']);
-
-function nombreAgenteValido(raw) {
-  if (!raw) return null;
-  const trimmed = raw.trim();
-  if (!trimmed || AGENTE_PLACEHOLDERS.has(trimmed.toUpperCase())) return null;
-  return trimmed;
-}
-
 export default function Dashboard({ onNavigate, onOpenEquipo }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -105,13 +94,11 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
     // duplicar al mismo agente por diferencias de mayúsculas/minúsculas
     const map = new Map();
     todos.forEach(e => {
-      if (e.piso !== pisoSim || e.estado === 'De baja') return;
-      // Agente/Team es la fuente principal; si está vacío o es un placeholder
-      // ("BODEGA", "TI", etc. usados para equipos en stock) se usa Usuario asignado
-      const nombre = nombreAgenteValido(e.team) || nombreAgenteValido(e.usuario);
-      if (!nombre) return;
-      const key = nombre.toUpperCase();
-      if (!map.has(key)) map.set(key, nombre);
+      if (e.piso !== pisoSim) return;
+      const raw = ((e.team || '').trim()) || ((e.usuario || '').trim());
+      if (!raw) return;
+      const key = raw.toUpperCase();
+      if (!map.has(key)) map.set(key, raw);
     });
     return [...map.values()].sort((a, b) => a.localeCompare(b, 'es'));
   }, [pisoSim, todos]);
