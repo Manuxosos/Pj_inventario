@@ -261,7 +261,7 @@ app.get('/api/historial', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 100, 200);
     const { rows } = await pool.query(
-      `SELECT h.*, e.piso AS equipo_piso
+      `SELECT h.*, e.piso AS equipo_piso, e.marca_modelo AS equipo_modelo, e.numero_serie AS equipo_serie
        FROM historial_equipos h
        LEFT JOIN equipos e ON e.id = h.equipo_id
        ORDER BY h.created_at DESC LIMIT $1`,

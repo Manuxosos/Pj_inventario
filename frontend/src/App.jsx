@@ -6,7 +6,7 @@ import Dashboard from './components/Dashboard';
 import Usuarios from './components/Usuarios';
 import Tareas from './components/Tareas';
 import Login from './components/Login';
-import { exportarExcel } from './api';
+import { exportarExcel, getEquipo } from './api';
 import Toast from './components/Toast';
 import './App.css';
 
@@ -36,6 +36,15 @@ export default function App() {
   const handleDashboardNav = (filter) => {
     setDashboardFilter(filter);
     setTab('inventario');
+  };
+
+  const handleOpenEquipo = async (equipoId) => {
+    try {
+      const equipo = await getEquipo(equipoId);
+      setModal({ mode: 'view', equipo });
+    } catch (err) {
+      showToast('No se pudo abrir el equipo', 'error');
+    }
   };
 
   useEffect(() => {
@@ -142,7 +151,7 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} />}
+        {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} />}
         {tab === 'inventario' && (
           <EquiposList
             refresh={refresh}

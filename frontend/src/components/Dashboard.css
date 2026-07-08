@@ -209,9 +209,19 @@
 .dash-feed-item {
   display: flex;
   gap: 12px;
-  padding: 10px 0;
+  padding: 10px 8px;
+  margin: 0 -8px;
+  border-radius: 6px;
 }
 .dash-feed-border { border-bottom: 1px solid var(--border); }
+
+.dash-feed-clickable {
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.dash-feed-clickable:hover {
+  background: rgba(0,245,255,0.05);
+}
 
 .dash-feed-dot {
   width: 7px;
@@ -242,6 +252,12 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--neon-cyan);
+}
+
+.dash-feed-serie {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: monospace;
 }
 
 .dash-feed-piso {

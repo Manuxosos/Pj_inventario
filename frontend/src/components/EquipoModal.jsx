@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { createEquipo, updateEquipo, getHistorialEquipo, updateNota } from '../api';
+import { createEquipo, updateEquipo, getHistorialEquipo, updateNota, getOpciones } from '../api';
 import { MessageSquare, MessageSquarePlus } from 'lucide-react';
 import './EquipoModal.css';
+
+const OTRO_PISO = '__otro__';
 
 const CAMPO_LABEL = {
   id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Team / Agente',
@@ -22,7 +24,7 @@ function fmtDate(iso) {
 const FIELDS = [
   { key: 'id_activo', label: 'ID Activo', group: 'general' },
   { key: 'id_ex', label: 'ID EX', group: 'general' },
-  { key: 'piso', label: 'Piso', group: 'general' },
+  { key: 'piso', label: 'Piso', group: 'general', type: 'piso' },
   { key: 'team', label: 'Agente / Team', group: 'general' },
   { key: 'responsable', label: 'Responsable IT', group: 'general' },
   { key: 'estado', label: 'Estado', group: 'general', type: 'select',
@@ -57,6 +59,8 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
   const [error,     setError]     = useState('');
   const [historial, setHistorial] = useState([]);
   const [notaEdit,  setNotaEdit]  = useState(null); // { id, nota }
+  const [pisos,      setPisos]      = useState([]);
+  const [pisoManual, setPisoManual] = useState(false);
   const isView = mode === 'view';
   const puedeNota = rol === 'admin' || rol === 'it';
 
@@ -65,6 +69,16 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
       getHistorialEquipo(equipo.id).then(setHistorial);
     }
   }, [isView, equipo?.id]);
+
+  useEffect(() => {
+    if (!isView) getOpciones().then(o => setPisos(o.pisos || []));
+  }, [isView]);
+
+  useEffect(() => {
+    if (form.piso && pisos.length && !pisos.includes(form.piso)) {
+      setPisoManual(true);
+    }
+  }, [pisos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGuardarNota = async (hId, nota) => {
     await updateNota(hId, nota);
@@ -143,6 +157,40 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
                       <label className="form-label">{field.label}</label>
                       {isView ? (
                         <div className="view-value">{form[field.key] || <span className="text-muted">—</span>}</div>
+                      ) : field.type === 'piso' ? (
+                        pisoManual ? (
+                          <div className="piso-manual-group">
+                            <input
+                              className="form-input"
+                              autoFocus
+                              placeholder="Ej: PISO 6"
+                              value={form.piso || ''}
+                              onChange={e => setForm(f => ({ ...f, piso: e.target.value }))}
+                            />
+                            {pisos.length > 0 && (
+                              <button type="button" className="btn-link-small" onClick={() => setPisoManual(false)}>
+                                Elegir de la lista
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <select
+                            className="form-input"
+                            value={form.piso || ''}
+                            onChange={e => {
+                              if (e.target.value === OTRO_PISO) {
+                                setPisoManual(true);
+                                setForm(f => ({ ...f, piso: '' }));
+                              } else {
+                                setForm(f => ({ ...f, piso: e.target.value }));
+                              }
+                            }}
+                          >
+                            <option value="">—</option>
+                            {pisos.map(o => <option key={o} value={o}>{o}</option>)}
+                            <option value={OTRO_PISO}>Otro (nuevo piso)...</option>
+                          </select>
+                        )
                       ) : field.type === 'textarea' ? (
                         <textarea
                           className="form-input"

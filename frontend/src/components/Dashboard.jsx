@@ -76,7 +76,7 @@ function normRam(raw) {
   return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
-export default function Dashboard({ onNavigate }) {
+export default function Dashboard({ onNavigate, onOpenEquipo }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [actividad, setActividad] = useState([]);
@@ -257,11 +257,14 @@ export default function Dashboard({ onNavigate }) {
           ) : (
             <div className="dash-feed">
               {actividad.map((h, i) => (
-                <div key={h.id} className={`dash-feed-item ${i < actividad.length - 1 ? 'dash-feed-border' : ''}`}>
+                <div key={h.id}
+                  className={`dash-feed-item dash-feed-clickable ${i < actividad.length - 1 ? 'dash-feed-border' : ''}`}
+                  onClick={() => onOpenEquipo?.(h.equipo_id)}>
                   <span className="dash-feed-dot" />
                   <div className="dash-feed-content">
                     <div className="dash-feed-top">
-                      <span className="dash-feed-equipo">{h.equipo_label || `Equipo #${h.equipo_id}`}</span>
+                      <span className="dash-feed-equipo">{h.equipo_modelo || `Equipo #${h.equipo_id}`}</span>
+                      {h.equipo_serie && <span className="dash-feed-serie">NS: {h.equipo_serie}</span>}
                       {h.equipo_piso && <span className="dash-feed-piso">{h.equipo_piso}</span>}
                       <span className="dash-feed-time">{fmtDate(h.created_at)}</span>
                     </div>
