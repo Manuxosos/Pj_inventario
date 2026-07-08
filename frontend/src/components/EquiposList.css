@@ -60,6 +60,21 @@
   opacity: 0.7;
 }
 
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.sortable-th:hover { opacity: 1; }
+
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.th-sort-idle { opacity: 0.4; }
+
 .equip-table td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);

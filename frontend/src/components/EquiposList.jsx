@@ -1,8 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo } from '../api';
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import './EquiposList.css';
+
+const COLUMNAS = [
+  { key: 'id_activo',    label: 'ID Activo' },
+  { key: 'piso',         label: 'Piso' },
+  { key: 'marca_modelo', label: 'Marca / Modelo' },
+  { key: 'procesador',   label: 'Procesador' },
+  { key: 'ram',          label: 'RAM' },
+  { key: 'disco_duro',   label: 'Disco' },
+  { key: 'numero_serie', label: 'Nº Serie' },
+  { key: 'estado',       label: 'Estado' },
+  { key: 'responsable',  label: 'Responsable' },
+];
 
 const ESTADOS = ['En uso', 'Disponible', 'En revisión', 'De baja'];
 
@@ -34,6 +46,27 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, label }
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+
+  const handleSort = (key) => {
+    setSortConfig(prev => prev.key === key
+      ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: 'asc' });
+  };
+
+  const equiposOrdenados = useMemo(() => {
+    if (!sortConfig.key) return equipos;
+    const { key, direction } = sortConfig;
+    return [...equipos].sort((a, b) => {
+      const av = (a[key] ?? '').toString();
+      const bv = (b[key] ?? '').toString();
+      if (!av && bv) return 1;
+      if (av && !bv) return -1;
+      if (!av && !bv) return 0;
+      const cmp = av.localeCompare(bv, 'es', { numeric: true, sensitivity: 'base' });
+      return direction === 'asc' ? cmp : -cmp;
+    });
+  }, [equipos, sortConfig]);
 
   // Cargar totales globales (sin filtros) para los stats
   useEffect(() => {
@@ -141,20 +174,24 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           <table className="equip-table">
             <thead>
               <tr>
-                <th>ID Activo</th>
-                <th>Piso</th>
-                <th>Marca / Modelo</th>
-                <th>Procesador</th>
-                <th>RAM</th>
-                <th>Disco</th>
-                <th>Nº Serie</th>
-                <th>Estado</th>
-                <th>Responsable</th>
+                {COLUMNAS.map(col => {
+                  const active = sortConfig.key === col.key;
+                  return (
+                    <th key={col.key} className="sortable-th" onClick={() => handleSort(col.key)}>
+                      <span className="th-content">
+                        {col.label}
+                        {active
+                          ? (sortConfig.direction === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />)
+                          : <ChevronsUpDown size={12} className="th-sort-idle" />}
+                      </span>
+                    </th>
+                  );
+                })}
                 <th></th>
               </tr>
             </thead>
             <tbody>
-              {equipos.map(eq => (
+              {equiposOrdenados.map(eq => (
                 <tr key={eq.id} className="equip-row">
                   <td><span className="id-badge">{eq.id_activo || '—'}</span></td>
                   <td className="text-muted">{eq.piso || '—'}</td>
