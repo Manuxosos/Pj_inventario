@@ -92,7 +92,10 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
     if (!pisoSim) return [];
     const set = new Set();
     todos.forEach(e => {
-      if (e.piso === pisoSim && e.estado === 'En uso' && e.team && e.team.trim()) {
+      // Un agente cuenta si tiene algún equipo asignado en ese piso, sin importar
+      // el estado puntual de ESE equipo (puede tener monitor "Disponible" y laptop
+      // "En uso" a la vez). Solo se excluyen equipos dados de baja.
+      if (e.piso === pisoSim && e.estado !== 'De baja' && e.team && e.team.trim()) {
         set.add(e.team.trim());
       }
     });

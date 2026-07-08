@@ -31,14 +31,14 @@ export default function PisoSimModal({ piso, agentes, onClose }) {
         <div className="modal-header">
           <div>
             <h2>Distribución — {piso}</h2>
-            <p className="piso-sim-sub"><Users size={13} /> {agentes.length} {agentes.length === 1 ? 'agente' : 'agentes'} con equipo en uso</p>
+            <p className="piso-sim-sub"><Users size={13} /> {agentes.length} {agentes.length === 1 ? 'agente' : 'agentes'} con equipo asignado en este piso</p>
           </div>
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <div className="modal-body piso-sim-body">
           {agentes.length === 0 ? (
-            <p className="piso-sim-empty">No hay agentes con equipos en uso registrados en este piso.</p>
+            <p className="piso-sim-empty">No hay agentes con equipos asignados registrados en este piso.</p>
           ) : (
             <div className="mesas-grid">
               {mesas.map((mesaAgentes, i) => {
