@@ -3,7 +3,10 @@ const bcrypt  = require('bcryptjs');
 const { pool } = require('./database');
 require('dotenv').config();
 
-const JWT_SECRET  = process.env.JWT_SECRET || 'REDACTED_SECRET';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET no está definido en el .env. Definí una clave larga y aleatoria antes de iniciar el servidor.');
+}
 const JWT_EXPIRES = '8h';
 
 async function login(usuario, password) {

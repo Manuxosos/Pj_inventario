@@ -117,10 +117,13 @@ async function initSchema() {
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {
-    const hash = bcrypt.hashSync(process.env.APP_PASSWORD || 'REDACTED_PASSWORD', 10);
+    if (!process.env.APP_USER || !process.env.APP_PASSWORD) {
+      throw new Error('APP_USER y APP_PASSWORD deben estar definidos en el .env para crear el admin inicial.');
+    }
+    const hash = bcrypt.hashSync(process.env.APP_PASSWORD, 10);
     await pool.query(
       "INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ($1, $2, $3, 'admin')",
-      ['Administrador', process.env.APP_USER || 'admin', hash]
+      ['Administrador', process.env.APP_USER, hash]
     );
     console.log('Usuario admin creado por defecto.');
   }

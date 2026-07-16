@@ -34,12 +34,8 @@ Tres roles, controlados por `requireRol(...roles)` en `server.js` y por `rol` ex
 - **it**: CRUD de equipos (incluye eliminar) + exportar Excel — sin gestión de usuarios
 - **observador**: solo lectura del dashboard e inventario
 
-Usuarios de prueba actuales en la BD:
-| Usuario | Contraseña | Rol |
-|---|---|---|
-| `admin` | `REDACTED_PASSWORD` | admin |
-| `usuario.it` | `REDACTED_PASSWORD` | it |
-| `obsv.it` | `REDACTED_PASSWORD` | observador |
+Usuarios actuales en la BD: `admin` (rol admin), `usuario.it` (rol it), `obsv.it` (rol observador).
+Las contraseñas NO se documentan acá por ser un repo público — consultarlas de forma segura (gestor de contraseñas, etc.), nunca committearlas.
 
 ## Convenciones importantes
 
