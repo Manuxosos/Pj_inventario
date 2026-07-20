@@ -49,3 +49,7 @@ export const getTareas   = ()         => api.get('/tareas').then(r => r.data);
 export const createTarea = (data)     => api.post('/tareas', data).then(r => r.data);
 export const updateTarea = (id, data) => api.put(`/tareas/${id}`, data).then(r => r.data);
 export const deleteTarea = (id)       => api.delete(`/tareas/${id}`).then(r => r.data);
+
+// Tablero de agentes por piso/mesa
+export const getAgentesTablero = ()               => api.get('/agentes/tablero').then(r => r.data);
+export const moverAgente       = (agente, piso, mesa) => api.put('/agentes/mover', { agente, piso, mesa }).then(r => r.data);

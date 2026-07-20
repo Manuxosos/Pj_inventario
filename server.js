@@ -356,6 +356,120 @@ app.get('/api/usuarios/asignables', async (req, res) => {
   }
 });
 
+// ── Tablero de agentes por piso/mesa ──────────────────────────────────────────
+// El piso de cada agente se deriva en vivo del piso de sus equipos (el más
+// frecuente si tiene varios), para que quede siempre sincronizado con
+// Inventario. Solo la mesa (1 o 2) dentro de ese piso se persiste.
+app.get('/api/agentes/tablero', async (req, res) => {
+  try {
+    const { rows: equipos } = await pool.query(
+      "SELECT piso, responsable FROM equipos WHERE responsable IS NOT NULL AND responsable != '' AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'"
+    );
+
+    const porAgente = new Map();
+    for (const e of equipos) {
+      const nombre = (e.responsable || '').trim();
+      if (!nombre) continue;
+      const key = nombre.toUpperCase();
+      if (!porAgente.has(key)) porAgente.set(key, { nombre, pisos: new Map() });
+      const info = porAgente.get(key);
+      info.pisos.set(e.piso, (info.pisos.get(e.piso) || 0) + 1);
+    }
+
+    // piso derivado = el más frecuente entre los equipos de ese agente
+    const derivados = new Map(); // key -> { nombre, piso }
+    for (const [key, info] of porAgente) {
+      let mejorPiso = null, mejorCount = -1;
+      for (const [piso, count] of info.pisos) {
+        if (count > mejorCount) { mejorPiso = piso; mejorCount = count; }
+      }
+      derivados.set(key, { nombre: info.nombre, piso: mejorPiso });
+    }
+
+    const { rows: asientosRows } = await pool.query('SELECT * FROM asientos_agentes');
+    const asientosMap = new Map(asientosRows.map(a => [a.agente_key, a]));
+
+    // ocupación actual por piso+mesa (solo contando agentes que siguen vigentes)
+    const ocupacion = new Map();
+    for (const [key, a] of asientosMap) {
+      const info = derivados.get(key);
+      if (!info) continue;
+      const k = `${info.piso}|${a.mesa}`;
+      ocupacion.set(k, (ocupacion.get(k) || 0) + 1);
+    }
+
+    // asignar mesa a agentes nuevos sin asiento persistido todavía
+    for (const [key, info] of derivados) {
+      if (asientosMap.has(key)) continue;
+      const enMesa1 = ocupacion.get(`${info.piso}|1`) || 0;
+      const mesa = enMesa1 < 7 ? 1 : 2;
+      ocupacion.set(`${info.piso}|${mesa}`, (ocupacion.get(`${info.piso}|${mesa}`) || 0) + 1);
+      await pool.query(
+        'INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa) VALUES ($1,$2,$3) ON CONFLICT (agente_key) DO NOTHING',
+        [info.nombre, key, mesa]
+      );
+      asientosMap.set(key, { agente_key: key, agente_nombre: info.nombre, mesa });
+    }
+
+    const tablero = {};
+    for (const [key, info] of derivados) {
+      if (!tablero[info.piso]) tablero[info.piso] = { 1: [], 2: [] };
+      const mesa = asientosMap.get(key)?.mesa === 2 ? 2 : 1;
+      tablero[info.piso][mesa].push(info.nombre);
+    }
+    for (const piso of Object.keys(tablero)) {
+      tablero[piso][1].sort((a, b) => a.localeCompare(b, 'es'));
+      tablero[piso][2].sort((a, b) => a.localeCompare(b, 'es'));
+    }
+
+    res.json({ pisos: Object.keys(tablero).sort(), tablero });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/agentes/mover — mueve un agente a otro piso/mesa (admin e IT)
+app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { agente, piso, mesa } = req.body;
+    if (!agente || !piso || !(mesa === 1 || mesa === 2)) {
+      return res.status(400).json({ error: 'Faltan datos (agente, piso, mesa)' });
+    }
+    const agenteTrim = agente.trim();
+    const key = agenteTrim.toUpperCase();
+
+    const { rows: equiposAgente } = await pool.query(
+      'SELECT id, id_activo, numero_serie, piso FROM equipos WHERE UPPER(TRIM(responsable)) = $1',
+      [key]
+    );
+    if (equiposAgente.length === 0) {
+      return res.status(404).json({ error: 'No se encontró ningún equipo con ese responsable' });
+    }
+
+    for (const eq of equiposAgente) {
+      if (eq.piso === piso) continue;
+      await pool.query('UPDATE equipos SET piso = $1 WHERE id = $2', [piso, eq.id]);
+      const label = eq.id_activo || eq.numero_serie || String(eq.id);
+      await pool.query(
+        `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
+         VALUES ($1,$2,$3,$4,'piso',$5,$6)`,
+        [eq.id, label, req.user.id, req.user.nombre || req.user.usuario, eq.piso, piso]
+      );
+    }
+
+    await pool.query(
+      `INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa)
+       VALUES ($1,$2,$3)
+       ON CONFLICT (agente_key) DO UPDATE SET mesa = $3, updated_at = NOW()`,
+      [agenteTrim, key, mesa]
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Gestión de usuarios (solo admin) ─────────────────────────────────────────
 app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
   try {

@@ -114,6 +114,19 @@ async function initSchema() {
     END $$
   `);
 
+  // Asientos de agentes: en qué mesa (1 o 2) se ubica cada agente dentro de
+  // su piso. El piso en sí NO se guarda acá — se deriva en vivo del piso de
+  // los equipos de ese agente, para que quede sincronizado con Inventario.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS asientos_agentes (
+      id            SERIAL PRIMARY KEY,
+      agente_key    TEXT NOT NULL UNIQUE,
+      agente_nombre TEXT NOT NULL,
+      mesa          INTEGER NOT NULL DEFAULT 1,
+      updated_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {
