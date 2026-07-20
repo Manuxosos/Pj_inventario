@@ -1,7 +1,29 @@
 import { useState, useEffect } from 'react';
-import { GripVertical } from 'lucide-react';
 import { getAgentesTablero, moverAgente } from '../api';
 import './Agentes.css';
+
+function iniciales(nombre) {
+  return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function splitFilas(agentes) {
+  const mitad = Math.ceil(agentes.length / 2);
+  return { arriba: agentes.slice(0, mitad), abajo: agentes.slice(mitad) };
+}
+
+function Asiento({ nombre, draggable, onDragStart }) {
+  return (
+    <div
+      className={`asiento ${draggable ? 'asiento-draggable' : ''}`}
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      title={draggable ? 'Arrastrá para mover' : nombre}
+    >
+      <span className="asiento-avatar">{iniciales(nombre)}</span>
+      <span className="asiento-nombre">{nombre}</span>
+    </div>
+  );
+}
 
 export default function Agentes({ rol }) {
   const puedeMover = rol === 'admin' || rol === 'it';
@@ -68,32 +90,34 @@ export default function Agentes({ rol }) {
                 {[1, 2].map(mesa => {
                   const key = `${piso}|${mesa}`;
                   const agentes = tablero[piso]?.[mesa] || [];
+                  const { arriba, abajo } = splitFilas(agentes);
                   return (
-                    <div
-                      key={mesa}
-                      className={`agentes-mesa ${dragOver === key ? 'agentes-mesa-over' : ''}`}
-                      onDragOver={puedeMover ? (e) => { e.preventDefault(); setDragOver(key); } : undefined}
-                      onDragLeave={puedeMover ? () => setDragOver(null) : undefined}
-                      onDrop={puedeMover ? (e) => handleDrop(e, piso, mesa) : undefined}
-                    >
-                      <div className="agentes-mesa-label">Mesa {mesa}</div>
-                      <div className="agentes-mesa-surface" />
-                      <div className="agentes-mesa-chips">
+                    <div key={mesa} className="mesa-bloque">
+                      <div className="mesa-label">Mesa {mesa}</div>
+                      <div
+                        className={`mesa-visual ${dragOver === key ? 'mesa-visual-over' : ''}`}
+                        onDragOver={puedeMover ? (e) => { e.preventDefault(); setDragOver(key); } : undefined}
+                        onDragLeave={puedeMover ? () => setDragOver(null) : undefined}
+                        onDrop={puedeMover ? (e) => handleDrop(e, piso, mesa) : undefined}
+                      >
                         {agentes.length === 0 ? (
-                          <span className="agentes-mesa-vacia">Sin agentes</span>
+                          <span className="mesa-vacia">Sin agentes</span>
                         ) : (
-                          agentes.map(nombre => (
-                            <div
-                              key={nombre}
-                              className={`agente-chip ${puedeMover ? 'agente-chip-draggable' : ''}`}
-                              draggable={puedeMover}
-                              onDragStart={puedeMover ? (e) => handleDragStart(e, nombre, piso, mesa) : undefined}
-                              title={puedeMover ? 'Arrastrá para mover' : nombre}
-                            >
-                              {puedeMover && <GripVertical size={12} className="agente-chip-grip" />}
-                              <span>{nombre}</span>
+                          <>
+                            <div className="mesa-fila mesa-fila-arriba">
+                              {arriba.map(nombre => (
+                                <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
+                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)} />
+                              ))}
                             </div>
-                          ))
+                            <div className="mesa-tablero" />
+                            <div className="mesa-fila mesa-fila-abajo">
+                              {abajo.map(nombre => (
+                                <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
+                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)} />
+                              ))}
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>

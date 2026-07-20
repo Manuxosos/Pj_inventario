@@ -20,8 +20,9 @@
 
 .agentes-pisos {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
   gap: 20px;
+  align-items: start;
 }
 
 .agentes-piso-card { padding: 18px 18px 20px; }
@@ -38,30 +39,16 @@
   text-shadow: 0 0 10px rgba(0,245,255,0.4);
 }
 
+/* Cada mesa se apila (no lado a lado) para que la mesa larga tenga espacio real */
 .agentes-mesas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-
-.agentes-mesa {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: rgba(0,245,255,0.02);
-  padding: 12px;
-  min-height: 150px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: background 0.15s, border-color 0.15s;
+  gap: 18px;
 }
 
-.agentes-mesa-over {
-  background: rgba(0,245,255,0.08);
-  border-color: rgba(0,245,255,0.4);
-}
+.mesa-bloque { display: flex; flex-direction: column; gap: 6px; }
 
-.agentes-mesa-label {
+.mesa-label {
   font-size: 10.5px;
   font-weight: 700;
   color: var(--text-muted);
@@ -69,50 +56,94 @@
   letter-spacing: 0.06em;
 }
 
-.agentes-mesa-surface {
-  height: 6px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, rgba(0,245,255,0.12), rgba(0,245,255,0.02));
-}
-
-.agentes-mesa-chips {
+/* La mesa vista desde arriba: forma alargada tipo "estadio" con los asientos
+   distribuidos en una fila arriba y otra abajo del tablero */
+.mesa-visual {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(0,245,255,0.02);
+  padding: 10px 14px;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
-  flex: 1;
-  align-content: flex-start;
+  min-height: 130px;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.agentes-mesa-vacia {
+.mesa-visual-over {
+  background: rgba(0,245,255,0.08);
+  border-color: rgba(0,245,255,0.4);
+}
+
+.mesa-vacia {
   font-size: 11px;
   color: var(--text-muted);
   opacity: 0.6;
+  text-align: center;
   padding: 8px 0;
 }
 
-.agente-chip {
-  display: inline-flex;
+.mesa-fila {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.mesa-fila-arriba { align-items: flex-end; }
+.mesa-fila-abajo  { align-items: flex-start; }
+
+/* El "tablero" de la mesa: forma alargada tipo pill, como se ve desde arriba */
+.mesa-tablero {
+  height: 34px;
+  border-radius: 17px;
+  background: linear-gradient(180deg, rgba(0,245,255,0.10), rgba(0,245,255,0.02));
+  border: 1px solid rgba(0,245,255,0.18);
+  margin: 2px 8px;
+}
+
+.asiento {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  font-size: 12px;
-  color: var(--text);
+  gap: 4px;
+  width: 62px;
   user-select: none;
 }
 
-.agente-chip-draggable {
-  cursor: grab;
-}
-.agente-chip-draggable:active { cursor: grabbing; }
-.agente-chip-draggable:hover {
-  border-color: rgba(0,245,255,0.35);
-  box-shadow: 0 0 8px rgba(0,245,255,0.15);
+.asiento-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  background: var(--neon-cyan);
+  color: #00131a;
+  box-shadow: 0 0 8px rgba(0,245,255,0.35);
+  flex-shrink: 0;
 }
 
-.agente-chip-grip { color: var(--text-muted); flex-shrink: 0; }
+.asiento-nombre {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.15;
+  max-width: 62px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.asiento-draggable { cursor: grab; }
+.asiento-draggable:active { cursor: grabbing; }
+.asiento-draggable:hover .asiento-avatar {
+  box-shadow: 0 0 14px rgba(0,245,255,0.6);
+}
 
 .agentes-moviendo {
   position: fixed;
