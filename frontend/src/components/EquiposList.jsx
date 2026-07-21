@@ -125,23 +125,33 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     if (!confirmDelete) return;
     if (confirmDelete.ids) {
       setAplicandoLote(true);
-      await Promise.all(confirmDelete.ids.map(id => deleteEquipo(id)));
       const idsSet = new Set(confirmDelete.ids);
-      setEquipos(e => e.filter(x => !idsSet.has(x.id)));
-      setTodos(e => e.filter(x => !idsSet.has(x.id)));
-      setSeleccion(new Set());
-      setAplicandoLote(false);
-      setConfirmDelete(null);
-      showToast?.(`${idsSet.size} equipos movidos a la papelera`);
+      try {
+        await Promise.all(confirmDelete.ids.map(id => deleteEquipo(id)));
+        setEquipos(e => e.filter(x => !idsSet.has(x.id)));
+        setTodos(e => e.filter(x => !idsSet.has(x.id)));
+        setSeleccion(new Set());
+        setConfirmDelete(null);
+        showToast?.(`${idsSet.size} equipos movidos a la papelera`);
+      } catch (err) {
+        showToast?.('Error al eliminar algunos equipos. Revisá cuáles se aplicaron.', 'error');
+      } finally {
+        setAplicandoLote(false);
+      }
       return;
     }
     setDeleting(confirmDelete.id);
     setConfirmDelete(null);
-    await deleteEquipo(confirmDelete.id);
-    setEquipos(e => e.filter(x => x.id !== confirmDelete.id));
-    setTodos(e => e.filter(x => x.id !== confirmDelete.id));
-    setDeleting(null);
-    showToast?.('Equipo movido a la papelera');
+    try {
+      await deleteEquipo(confirmDelete.id);
+      setEquipos(e => e.filter(x => x.id !== confirmDelete.id));
+      setTodos(e => e.filter(x => x.id !== confirmDelete.id));
+      showToast?.('Equipo movido a la papelera');
+    } catch (err) {
+      showToast?.('Error al eliminar el equipo', 'error');
+    } finally {
+      setDeleting(null);
+    }
   };
 
   const toggleSeleccion = (id) => {
@@ -162,14 +172,20 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     if (!valor || seleccion.size === 0) return;
     setAplicandoLote(true);
     const seleccionados = equipos.filter(e => seleccion.has(e.id));
-    await Promise.all(seleccionados.map(eq => updateEquipo(eq.id, { ...eq, [campo]: valor })));
-    const actualizar = list => list.map(e => seleccion.has(e.id) ? { ...e, [campo]: valor } : e);
-    setEquipos(actualizar);
-    setTodos(actualizar);
-    setNuevoEstadoLote('');
-    setNuevoPisoLote('');
-    setAplicandoLote(false);
-    setSeleccion(new Set());
+    try {
+      await Promise.all(seleccionados.map(eq => updateEquipo(eq.id, { ...eq, [campo]: valor })));
+      const actualizar = list => list.map(e => seleccion.has(e.id) ? { ...e, [campo]: valor } : e);
+      setEquipos(actualizar);
+      setTodos(actualizar);
+      setNuevoEstadoLote('');
+      setNuevoPisoLote('');
+      setSeleccion(new Set());
+      showToast?.(`${seleccionados.length} equipos actualizados`);
+    } catch (err) {
+      showToast?.('Error al aplicar el cambio en lote. Revisá cuáles se aplicaron.', 'error');
+    } finally {
+      setAplicandoLote(false);
+    }
   };
 
   const handleExportar = async () => {
@@ -374,6 +390,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         <PapeleraModal
           onClose={() => setPapeleraAbierta(false)}
           onCambio={() => { cargarTodos(); getEquipos(buildParams()).then(setEquipos); }}
+          showToast={showToast}
         />
       )}
 

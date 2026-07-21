@@ -10,7 +10,7 @@ function fmtDate(iso) {
   });
 }
 
-export default function PapeleraModal({ onClose, onCambio }) {
+export default function PapeleraModal({ onClose, onCambio, showToast }) {
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [procesando, setProcesando] = useState(null);
@@ -25,19 +25,31 @@ export default function PapeleraModal({ onClose, onCambio }) {
 
   const handleRestaurar = async (eq) => {
     setProcesando(eq.id);
-    await restaurarEquipo(eq.id);
-    setEquipos(prev => prev.filter(e => e.id !== eq.id));
-    setProcesando(null);
-    onCambio?.();
+    try {
+      await restaurarEquipo(eq.id);
+      setEquipos(prev => prev.filter(e => e.id !== eq.id));
+      onCambio?.();
+      showToast?.('Equipo restaurado correctamente');
+    } catch (err) {
+      showToast?.('Error al restaurar el equipo', 'error');
+    } finally {
+      setProcesando(null);
+    }
   };
 
   const handleEliminarDefinitivo = async () => {
     if (!confirmarBorrado) return;
     setProcesando(confirmarBorrado.id);
-    await eliminarDefinitivo(confirmarBorrado.id);
-    setEquipos(prev => prev.filter(e => e.id !== confirmarBorrado.id));
-    setProcesando(null);
-    setConfirmarBorrado(null);
+    try {
+      await eliminarDefinitivo(confirmarBorrado.id);
+      setEquipos(prev => prev.filter(e => e.id !== confirmarBorrado.id));
+      showToast?.('Equipo eliminado definitivamente');
+    } catch (err) {
+      showToast?.('Error al eliminar el equipo', 'error');
+    } finally {
+      setProcesando(null);
+      setConfirmarBorrado(null);
+    }
   };
 
   return (
