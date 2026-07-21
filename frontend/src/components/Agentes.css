@@ -127,6 +127,18 @@
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* Brillo pulsante sincronizado: todos los avatares comparten la misma
+   duración y arrancan sin desfase, por eso laten al unísono */
+@keyframes asiento-resplandor {
+  0%, 100% {
+    box-shadow: 0 0 8px var(--agente-glow, rgba(0,245,255,0.35));
+  }
+  50% {
+    box-shadow: 0 0 18px var(--agente-color, var(--neon-cyan)),
+                0 0 32px var(--agente-glow, rgba(0,245,255,0.3));
+  }
+}
+
 .asiento-avatar {
   width: 32px;
   height: 32px;
@@ -138,9 +150,9 @@
   font-weight: 700;
   background: var(--agente-color, var(--neon-cyan));
   color: #00131a;
-  box-shadow: 0 0 8px var(--agente-glow, rgba(0,245,255,0.35));
   flex-shrink: 0;
   transition: transform 0.15s, box-shadow 0.15s;
+  animation: asiento-resplandor 2.4s ease-in-out infinite;
 }
 
 .asiento-nombre {
@@ -160,6 +172,7 @@
 .asiento-clickable { cursor: pointer; }
 
 .asiento:hover .asiento-avatar {
+  animation-play-state: paused;
   transform: scale(1.12);
   box-shadow: 0 0 16px var(--agente-color, var(--neon-cyan));
 }
@@ -169,6 +182,7 @@
   opacity: 0.35;
 }
 .asiento-dragging .asiento-avatar {
+  animation-play-state: paused;
   box-shadow: 0 0 4px var(--agente-glow, rgba(0,245,255,0.2));
 }
 
