@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getTareas, createTarea, updateTarea, deleteTarea, getUsuariosAsign } from '../api';
 import { PlusCircle, Pencil, Trash2, CheckCircle2, Clock, XCircle, PlayCircle, AlertTriangle } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import './Tareas.css';
 
 const ESTADOS = ['Pendiente', 'En curso', 'Finalizado', 'Cancelado'];
@@ -24,13 +25,14 @@ function estaAtrasada(t) {
   return new Date(t.fecha_limite) < hoy;
 }
 
-export default function Tareas({ rol }) {
+export default function Tareas({ rol, miId }) {
   const [tareas,    setTareas]    = useState([]);
   const [usuarios,  setUsuarios]  = useState([]);
   const [modal,     setModal]     = useState(null);
   const [filtro,    setFiltro]    = useState('');
   const [loading,   setLoading]   = useState(true);
   const [deleting,  setDeleting]  = useState(null);
+  const [soloMias,  setSoloMias]  = useState(false);
 
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin     = rol === 'admin';
@@ -58,6 +60,7 @@ export default function Tareas({ rol }) {
     estado: est,
     items: tareas.filter(t =>
       t.estado === est &&
+      (!soloMias || String(t.asignado_id) === String(miId)) &&
       (!filtro || t.titulo.toLowerCase().includes(filtro.toLowerCase()) ||
         (t.asignado_nombre || '').toLowerCase().includes(filtro.toLowerCase()) ||
         (t.piso || '').toLowerCase().includes(filtro.toLowerCase()))
@@ -72,6 +75,12 @@ export default function Tareas({ rol }) {
           <p className="tareas-sub">Seguimiento de trabajos y proyectos del equipo</p>
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            className={`btn btn-sm ${soloMias ? 'btn-primary' : 'btn-ghost'}`}
+            onClick={() => setSoloMias(m => !m)}
+          >
+            Mis tareas
+          </button>
           <input
             className="form-input search-input"
             placeholder="Buscar tarea..."
@@ -88,7 +97,27 @@ export default function Tareas({ rol }) {
       </div>
 
       {loading ? (
-        <div className="table-loading">Cargando...</div>
+        <div className="kanban">
+          {ESTADOS.map(est => {
+            const { cls, Icon } = ESTADO_META[est];
+            return (
+              <div key={est} className="kanban-col">
+                <div className={`kanban-col-header ${cls}`}>
+                  <Icon size={14} />
+                  <span>{est}</span>
+                </div>
+                <div className="kanban-cards">
+                  {[1, 2].map(i => (
+                    <div key={i} className="tarea-card card" style={{ gap: 8 }}>
+                      <div className="skeleton-bar" style={{ width: '80%' }} />
+                      <div className="skeleton-bar" style={{ width: '50%', height: 10 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="kanban">
           {tareasAgrupadas.map(({ estado, items }) => {
@@ -160,13 +189,20 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
   const [form, setForm]     = useState(data);
   const [saving, setSaving] = useState(false);
   const [error, setError]   = useState('');
+  const [confirmDescartar, setConfirmDescartar] = useState(false);
   const isEdit = mode === 'edit';
+  const snapshotInicial = useRef(JSON.stringify(data));
+
+  const intentarCerrar = () => {
+    if (JSON.stringify(form) !== snapshotInicial.current) setConfirmDescartar(true);
+    else onClose();
+  };
 
   useEffect(() => {
-    const onKey = e => { if (e.key === 'Escape') onClose(); };
+    const onKey = e => { if (e.key === 'Escape') intentarCerrar(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }); // sin deps: siempre usa la version mas reciente del form
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -191,11 +227,11 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && intentarCerrar()}>
       <div className="modal-box" style={{ maxWidth: 500 }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={intentarCerrar}>✕</button>
         </div>
         <form className="modal-body" onSubmit={handleSubmit}>
           <section className="form-section">
@@ -252,13 +288,23 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
           {error && <div className="form-error">{error}</div>}
 
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancelar</button>
+            <button type="button" className="btn btn-secondary" onClick={intentarCerrar}>Cancelar</button>
             <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear tarea'}
             </button>
           </div>
         </form>
       </div>
+
+      {confirmDescartar && (
+        <ConfirmModal
+          title="Descartar cambios"
+          message="Tenés cambios sin guardar. ¿Querés descartarlos y cerrar de todas formas?"
+          confirmLabel="Descartar"
+          onConfirm={onClose}
+          onCancel={() => setConfirmDescartar(false)}
+        />
+      )}
     </div>
   );
 }

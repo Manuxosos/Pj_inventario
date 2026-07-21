@@ -88,7 +88,17 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo }) {
     }
   };
 
-  if (loading) return <div className="dash-loading">Cargando tablero de agentes...</div>;
+  if (loading) return (
+    <div className="agentes-pisos">
+      {[1, 2, 3].map(i => (
+        <div key={i} className="agentes-piso-card card">
+          <div className="skeleton-bar" style={{ width: '30%', marginBottom: 14 }} />
+          <div className="skeleton-bar" style={{ height: 130, borderRadius: 14, marginBottom: 18 }} />
+          <div className="skeleton-bar" style={{ height: 130, borderRadius: 14 }} />
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="agentes-page">

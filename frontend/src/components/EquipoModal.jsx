@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createEquipo, updateEquipo, getHistorialEquipo, updateNota, getOpciones } from '../api';
 import { MessageSquare, MessageSquarePlus } from 'lucide-react';
+import ConfirmModal from './ConfirmModal';
 import './EquipoModal.css';
 
 const OTRO_PISO = '__otro__';
@@ -12,7 +13,7 @@ const CAMPO_LABEL = {
   usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
   responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
   monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
-  piso:'Piso', creacion:'Creación',
+  piso:'Piso', creacion:'Creación', eliminacion:'Eliminación', restauracion:'Restauración',
 };
 
 function fmtDate(iso) {
@@ -61,8 +62,17 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
   const [notaEdit,  setNotaEdit]  = useState(null); // { id, nota }
   const [pisos,      setPisos]      = useState([]);
   const [pisoManual, setPisoManual] = useState(false);
+  const [confirmDescartar, setConfirmDescartar] = useState(false);
   const isView = mode === 'view';
   const puedeNota = rol === 'admin' || rol === 'it';
+  const snapshotInicial = useRef(JSON.stringify(form));
+
+  const hayCambiosSinGuardar = () => !isView && JSON.stringify(form) !== snapshotInicial.current;
+
+  const intentarCerrar = () => {
+    if (hayCambiosSinGuardar()) setConfirmDescartar(true);
+    else onClose();
+  };
 
   useEffect(() => {
     if (isView && equipo?.id) {
@@ -87,10 +97,10 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
   };
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const onKey = (e) => { if (e.key === 'Escape') intentarCerrar(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  }); // sin deps: siempre usa la version mas reciente de intentarCerrar/form
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -138,11 +148,11 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
   );
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && intentarCerrar()}>
       <div className="modal-box">
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={intentarCerrar}>✕</button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit}>
@@ -235,7 +245,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
                         <span className="historial-campo">{CAMPO_LABEL[h.campo] || h.campo}</span>
                         <span className="historial-time">{fmtDate(h.created_at)}</span>
                       </div>
-                      {h.campo !== 'creacion' ? (
+                      {!['creacion', 'eliminacion', 'restauracion'].includes(h.campo) ? (
                         <div className="historial-cambio">
                           <span className="historial-ant">{h.valor_ant || '—'}</span>
                           <span className="historial-arrow">→</span>
@@ -265,7 +275,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
           {error && <div className="form-error">{error}</div>}
 
           <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={intentarCerrar}>
               {isView ? 'Cerrar' : 'Cancelar'}
             </button>
             {!isView && (
@@ -276,6 +286,16 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
           </div>
         </form>
       </div>
+
+      {confirmDescartar && (
+        <ConfirmModal
+          title="Descartar cambios"
+          message="Tenés cambios sin guardar. ¿Querés descartarlos y cerrar de todas formas?"
+          confirmLabel="Descartar"
+          onConfirm={onClose}
+          onCancel={() => setConfirmDescartar(false)}
+        />
+      )}
     </div>
   );
 }

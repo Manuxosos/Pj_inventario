@@ -30,7 +30,12 @@ export const createEquipo = (data)   => api.post('/equipos', data).then(r => r.d
 export const updateEquipo = (id, d)  => api.put(`/equipos/${id}`, d).then(r => r.data);
 export const deleteEquipo = (id)     => api.delete(`/equipos/${id}`).then(r => r.data);
 export const getOpciones  = ()       => api.get('/opciones').then(r => r.data);
-export const exportarExcel = ()      => api.get('/exportar', { responseType: 'blob' }).then(r => r.data);
+export const exportarExcel = (params) => api.get('/exportar', { params, responseType: 'blob' }).then(r => r.data);
+
+// Papelera de equipos (solo admin)
+export const getPapelera         = ()   => api.get('/equipos/papelera').then(r => r.data);
+export const restaurarEquipo     = (id) => api.put(`/equipos/${id}/restaurar`).then(r => r.data);
+export const eliminarDefinitivo  = (id) => api.delete(`/equipos/${id}/definitivo`).then(r => r.data);
 
 // Usuarios (solo admin)
 export const getUsuarios      = ()         => api.get('/usuarios').then(r => r.data);

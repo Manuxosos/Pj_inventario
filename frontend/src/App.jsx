@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut, Armchair, Search } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
@@ -8,7 +8,7 @@ import Tareas from './components/Tareas';
 import Agentes from './components/Agentes';
 import GlobalSearch from './components/GlobalSearch';
 import Login from './components/Login';
-import { exportarExcel, getEquipo } from './api';
+import { getEquipo } from './api';
 import Toast from './components/Toast';
 import './App.css';
 
@@ -82,36 +82,6 @@ export default function App() {
     setAutenticado(false);
   };
 
-  const handleExportar = async () => {
-    try {
-      const blob = await exportarExcel();
-      const fecha = new Date().toISOString().slice(0, 10);
-      try {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: `inventario_equipos_${fecha}.xlsx`,
-          types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        showToast('Excel exportado correctamente');
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `inventario_equipos_${fecha}.xlsx`;
-          a.click();
-          URL.revokeObjectURL(url);
-          showToast('Excel exportado correctamente');
-        }
-      }
-    } catch (err) {
-      console.error('Error exportando:', err);
-      showToast('Error al exportar', 'error');
-    }
-  };
-
   const showToast = (message, type = 'success') => setToast({ message, type });
 
   const handleSaved = (msg = 'Guardado correctamente') => {
@@ -163,14 +133,9 @@ export default function App() {
               </div>
             )}
             {tab === 'inventario' && puedeEditar && (
-              <>
-                <button className="btn btn-secondary" onClick={handleExportar}>
-                  <Download size={14} /> Exportar Excel
-                </button>
-                <button className="btn btn-primary" onClick={() => setModal({ mode: 'create' })}>
-                  <PlusCircle size={14} /> Nuevo Equipo
-                </button>
-              </>
+              <button className="btn btn-primary" onClick={() => setModal({ mode: 'create' })}>
+                <PlusCircle size={14} /> Nuevo Equipo
+              </button>
             )}
             <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión">
               <LogOut size={16} />
@@ -181,25 +146,28 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} />}
-        {tab === 'inventario' && (
-          <EquiposList
-            refresh={refresh}
-            externalFilters={dashboardFilter}
-            rol={rol}
-            onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
-            onView={(equipo) => setModal({ mode: 'view', equipo })}
-          />
-        )}
-        {tab === 'tareas'   && <Tareas rol={rol} />}
-        {tab === 'agentes'  && (
-          <Agentes
-            rol={rol}
-            onOpenEquipo={handleOpenEquipo}
-            onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
-          />
-        )}
-        {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
+        <div key={tab} className="tab-fade">
+          {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} />}
+          {tab === 'inventario' && (
+            <EquiposList
+              refresh={refresh}
+              externalFilters={dashboardFilter}
+              rol={rol}
+              onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
+              onView={(equipo) => setModal({ mode: 'view', equipo })}
+              showToast={showToast}
+            />
+          )}
+          {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} />}
+          {tab === 'agentes'  && (
+            <Agentes
+              rol={rol}
+              onOpenEquipo={handleOpenEquipo}
+              onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+            />
+          )}
+          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
+        </div>
       </main>
 
       {modal && (

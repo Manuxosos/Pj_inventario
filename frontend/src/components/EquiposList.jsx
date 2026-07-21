@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getEquipos, getOpciones, deleteEquipo, updateEquipo } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
+import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
+import PapeleraModal from './PapeleraModal';
 import './EquiposList.css';
 
 const COLUMNAS = [
@@ -34,23 +35,37 @@ const ACCESORIO_LABEL = {
   monitor: 'Monitor', estuche: 'Estuche', adaptador_tplink: 'Adaptador Tp-Link',
 };
 
-export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView }) {
+const FILTERS_KEY = 'inventario_filtros_v1';
+const SORT_KEY = 'inventario_orden_v1';
+const FILTROS_VACIOS = { search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' };
+
+function leerGuardado(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView, showToast }) {
   const puedeEditar = rol === 'admin' || rol === 'it';
+  const esAdmin = rol === 'admin';
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
-  const [filters, setFilters] = useState({
-    search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '',
-    ...(externalFilters || {})
-  });
+  const [filters, setFilters] = useState(() => ({
+    ...FILTROS_VACIOS,
+    ...(externalFilters || leerGuardado(FILTERS_KEY) || {}),
+  }));
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, label } | { ids: [] }
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState(() => leerGuardado(SORT_KEY) || { key: null, direction: 'asc' });
   const [seleccion, setSeleccion] = useState(new Set());
   const [nuevoEstadoLote, setNuevoEstadoLote] = useState('');
   const [nuevoPisoLote, setNuevoPisoLote] = useState('');
   const [aplicandoLote, setAplicandoLote] = useState(false);
+  const [papeleraAbierta, setPapeleraAbierta] = useState(false);
+  const [exportando, setExportando] = useState(false);
 
   const handleSort = (key) => {
     setSortConfig(prev => prev.key === key
@@ -72,15 +87,11 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     });
   }, [equipos, sortConfig]);
 
-  // Cargar totales globales (sin filtros) para los stats
-  useEffect(() => {
-    getEquipos().then(setTodos);
-    getOpciones().then(setOpciones);
-  }, [refresh]);
+  // Persistir filtros y orden para recordarlos la próxima vez
+  useEffect(() => { localStorage.setItem(FILTERS_KEY, JSON.stringify(filters)); }, [filters]);
+  useEffect(() => { localStorage.setItem(SORT_KEY, JSON.stringify(sortConfig)); }, [sortConfig]);
 
-  // Cargar equipos filtrados para la tabla
-  useEffect(() => {
-    setLoading(true);
+  const buildParams = () => {
     const params = {};
     if (filters.search)   params.search   = filters.search;
     if (filters.piso)     params.piso     = filters.piso;
@@ -89,7 +100,21 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     if (filters.ram)      params.ram      = filters.ram;
     if (filters.modelo)   params.modelo   = filters.modelo;
     if (filters.accesorio) params.accesorio = filters.accesorio;
-    getEquipos(params).then(data => {
+    return params;
+  };
+
+  const cargarTodos = () => {
+    getEquipos().then(setTodos);
+    getOpciones().then(setOpciones);
+  };
+
+  // Cargar totales globales (sin filtros) para los stats
+  useEffect(() => { cargarTodos(); }, [refresh]);
+
+  // Cargar equipos filtrados para la tabla
+  useEffect(() => {
+    setLoading(true);
+    getEquipos(buildParams()).then(data => {
       setEquipos(data);
       setLoading(false);
     });
@@ -107,6 +132,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
       setSeleccion(new Set());
       setAplicandoLote(false);
       setConfirmDelete(null);
+      showToast?.(`${idsSet.size} equipos movidos a la papelera`);
       return;
     }
     setDeleting(confirmDelete.id);
@@ -115,6 +141,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     setEquipos(e => e.filter(x => x.id !== confirmDelete.id));
     setTodos(e => e.filter(x => x.id !== confirmDelete.id));
     setDeleting(null);
+    showToast?.('Equipo movido a la papelera');
   };
 
   const toggleSeleccion = (id) => {
@@ -145,6 +172,40 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
     setSeleccion(new Set());
   };
 
+  const handleExportar = async () => {
+    setExportando(true);
+    try {
+      const blob = await exportarExcel(buildParams());
+      const fecha = new Date().toISOString().slice(0, 10);
+      const nombreArchivo = `inventario_equipos_${fecha}.xlsx`;
+      try {
+        const handle = await window.showSaveFilePicker({
+          suggestedName: nombreArchivo,
+          types: [{ description: 'Excel', accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] } }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        showToast?.('Excel exportado correctamente');
+      } catch (e) {
+        if (e.name !== 'AbortError') {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = nombreArchivo;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast?.('Excel exportado correctamente');
+        }
+      }
+    } catch (err) {
+      showToast?.('Error al exportar', 'error');
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  const hayFiltrosActivos = Object.values(filters).some(Boolean);
   const enUso   = todos.filter(e => e.estado === 'En uso').length;
   const enBodega = todos.filter(e => e.piso === 'BODEGA').length;
 
@@ -186,9 +247,22 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           <option value="">Todos los pisos</option>
           {opciones.pisos.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
-        {(filters.search || filters.piso || filters.estadoIn || filters.ram || filters.modelo || filters.accesorio) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
+        {hayFiltrosActivos && (
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ ...FILTROS_VACIOS })}>
             Limpiar
+          </button>
+        )}
+
+        <div className="filters-bar-spacer" />
+
+        {puedeEditar && (
+          <button className="btn btn-secondary" onClick={handleExportar} disabled={exportando}>
+            <Download size={14} /> {exportando ? 'Exportando...' : hayFiltrosActivos ? 'Exportar filtrado' : 'Exportar Excel'}
+          </button>
+        )}
+        {esAdmin && (
+          <button className="btn btn-ghost" onClick={() => setPapeleraAbierta(true)} title="Ver equipos eliminados">
+            <Trash size={14} /> Papelera
           </button>
         )}
       </div>
@@ -202,7 +276,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           {filters.ram       && <span className="active-filter-chip">RAM: {filters.ram}</span>}
           {filters.modelo    && <span className="active-filter-chip">Modelo: {filters.modelo}</span>}
           {filters.accesorio && <span className="active-filter-chip">{ACCESORIO_LABEL[filters.accesorio] || filters.accesorio}: Con accesorio</span>}
-          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' })}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ ...FILTROS_VACIOS })}>
             × Quitar
           </button>
         </div>
@@ -211,7 +285,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
       {/* Table */}
       <div className="table-wrapper card">
         {loading ? (
-          <div className="table-loading">Cargando...</div>
+          <TableSkeleton conCheckbox={puedeEditar} />
         ) : equipos.length === 0 ? (
           <div className="table-empty">No se encontraron equipos.</div>
         ) : (
@@ -288,10 +362,18 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         <ConfirmModal
           title={confirmDelete.ids ? `Eliminar ${confirmDelete.ids.length} equipos` : 'Eliminar equipo'}
           message={confirmDelete.ids
-            ? `¿Estás seguro de que querés eliminar los ${confirmDelete.ids.length} equipos seleccionados? Esta acción no se puede deshacer.`
-            : `¿Estás seguro de que querés eliminar el equipo "${confirmDelete.label}"? Esta acción no se puede deshacer.`}
+            ? `¿Estás seguro de que querés mover los ${confirmDelete.ids.length} equipos seleccionados a la papelera?`
+            : `¿Estás seguro de que querés mover el equipo "${confirmDelete.label}" a la papelera?`}
+          confirmLabel="Mover a la papelera"
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
+      {papeleraAbierta && (
+        <PapeleraModal
+          onClose={() => setPapeleraAbierta(false)}
+          onCambio={() => { cargarTodos(); getEquipos(buildParams()).then(setEquipos); }}
         />
       )}
 
@@ -332,5 +414,22 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         </div>
       )}
     </div>
+  );
+}
+
+function TableSkeleton({ conCheckbox }) {
+  const cols = COLUMNAS.length + (conCheckbox ? 1 : 0) + 1;
+  return (
+    <table className="equip-table">
+      <tbody>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <tr key={i} className="equip-row">
+            {Array.from({ length: cols }).map((_, j) => (
+              <td key={j}><div className="skeleton-bar" style={{ animationDelay: `${(i * cols + j) * 0.02}s` }} /></td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

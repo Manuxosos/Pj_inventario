@@ -60,7 +60,7 @@ const CAMPO_LABEL = {
   usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
   responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
   monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
-  piso:'Piso', creacion:'Creación',
+  piso:'Piso', creacion:'Creación', eliminacion:'Eliminación', restauracion:'Restauración',
 };
 
 function fmtDate(iso) {
@@ -103,7 +103,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
     return [...map.values()].sort((a, b) => a.localeCompare(b, 'es'));
   }, [pisoSeleccionado, todos]);
 
-  if (loading) return <div className="dash-loading">Cargando dashboard...</div>;
+  if (loading) return <DashboardSkeleton />;
 
   const count = fn => todos.filter(fn).length;
 
@@ -285,8 +285,8 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
                       {h.equipo_piso && <span className="dash-feed-piso">{h.equipo_piso}</span>}
                       <span className="dash-feed-time">{fmtDate(h.created_at)}</span>
                     </div>
-                    {h.campo === 'creacion' ? (
-                      <span style={{ fontSize: 12, color: 'var(--neon-green)' }}>{h.valor_nuevo}</span>
+                    {h.campo === 'creacion' || h.campo === 'eliminacion' || h.campo === 'restauracion' ? (
+                      <span style={{ fontSize: 12, color: h.campo === 'eliminacion' ? 'var(--neon-pink)' : 'var(--neon-green)' }}>{h.valor_nuevo}</span>
                     ) : (
                       <div className="dash-feed-cambio">
                         <span className="dash-feed-campo">{CAMPO_LABEL[h.campo] || h.campo}:</span>
@@ -320,6 +320,30 @@ function KpiCard({ value, label, color, icon, onClick }) {
       <div className="kpi-icon">{icon}</div>
       <span className="kpi-num">{value}</span>
       <span className="kpi-label">{label}</span>
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="dashboard">
+      <div className="kpi-row">
+        {[1, 2, 3, 4].map(i => (
+          <div key={i} className="kpi-card" style={{ gap: 10 }}>
+            <div className="skeleton-bar" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+            <div className="skeleton-bar" style={{ width: '60%', height: 22 }} />
+            <div className="skeleton-bar" style={{ width: '80%' }} />
+          </div>
+        ))}
+      </div>
+      <div className="dash-row-3">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="dash-card card" style={{ gap: 12 }}>
+            <div className="skeleton-bar" style={{ width: '40%' }} />
+            <div className="skeleton-bar" style={{ height: 180, borderRadius: 12 }} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

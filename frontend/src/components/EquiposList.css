@@ -26,6 +26,7 @@
 }
 
 .search-input { flex: 1; min-width: 200px; }
+.filters-bar-spacer { flex: 1; }
 
 .table-wrapper {
   overflow: hidden;
@@ -36,6 +37,7 @@
   text-align: center;
   color: var(--text-muted);
 }
+
 
 .equip-table {
   width: 100%;

@@ -65,32 +65,53 @@ app.post('/api/login', async (req, res) => {
 // ── Rutas protegidas (requieren token) ────────────────────────────────────────
 app.use('/api', verificarToken);
 
+// Construye el WHERE + params de equipos a partir de los filtros de la
+// query string. Se comparte entre GET /api/equipos y GET /api/exportar
+// para que "exportar" respete exactamente los mismos filtros aplicados.
+function buildEquiposQuery(query) {
+  const { piso, estado, estadoIn, search, ram, modelo, accesorio, responsable } = query;
+  const { params, add } = mkParams();
+  let q = 'SELECT * FROM equipos WHERE eliminado_en IS NULL';
+
+  if (piso)   q += ` AND piso = ${add(piso)}`;
+  if (estado) q += ` AND estado = ${add(estado)}`;
+  if (responsable) q += ` AND UPPER(TRIM(responsable)) = ${add(responsable.trim().toUpperCase())}`;
+  if (estadoIn) {
+    const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
+    if (vals.length) q += ` AND estado IN (${vals.map(v => add(v)).join(',')})`;
+  }
+  if (ram)    q += ` AND ram = ${add(ram)}`;
+  if (modelo) q += ` AND marca_modelo = ${add(modelo)}`;
+  if (accesorio && ACCESORIO_COLS.includes(accesorio)) {
+    q += ` AND (${accesorio} = 'Si' OR ${accesorio} = 'Si 2')`;
+  }
+  if (search) {
+    const s = `%${search}%`;
+    q += ` AND (id_activo ILIKE ${add(s)} OR numero_serie ILIKE ${add(s)} OR marca_modelo ILIKE ${add(s)} OR team ILIKE ${add(s)} OR responsable ILIKE ${add(s)})`;
+  }
+  q += ' ORDER BY piso, id_activo';
+  return { q, params };
+}
+
 // GET /api/equipos
 app.get('/api/equipos', async (req, res) => {
   try {
-    const { piso, estado, estadoIn, search, ram, modelo, accesorio, responsable } = req.query;
-    const { params, add } = mkParams();
-    let q = 'SELECT * FROM equipos WHERE TRUE';
-
-    if (piso)   q += ` AND piso = ${add(piso)}`;
-    if (estado) q += ` AND estado = ${add(estado)}`;
-    if (responsable) q += ` AND UPPER(TRIM(responsable)) = ${add(responsable.trim().toUpperCase())}`;
-    if (estadoIn) {
-      const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
-      if (vals.length) q += ` AND estado IN (${vals.map(v => add(v)).join(',')})`;
-    }
-    if (ram)    q += ` AND ram = ${add(ram)}`;
-    if (modelo) q += ` AND marca_modelo = ${add(modelo)}`;
-    if (accesorio && ACCESORIO_COLS.includes(accesorio)) {
-      q += ` AND (${accesorio} = 'Si' OR ${accesorio} = 'Si 2')`;
-    }
-    if (search) {
-      const s = `%${search}%`;
-      q += ` AND (id_activo ILIKE ${add(s)} OR numero_serie ILIKE ${add(s)} OR marca_modelo ILIKE ${add(s)} OR team ILIKE ${add(s)} OR responsable ILIKE ${add(s)})`;
-    }
-    q += ' ORDER BY piso, id_activo';
-
+    const { q, params } = buildEquiposQuery(req.query);
     const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/equipos/papelera — equipos eliminados (solo admin)
+// IMPORTANTE: debe ir antes de /api/equipos/:id para que Express no
+// interprete "papelera" como un id
+app.get('/api/equipos/papelera', requireRol('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM equipos WHERE eliminado_en IS NOT NULL ORDER BY eliminado_en DESC"
+    );
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -167,10 +188,50 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   }
 });
 
-// DELETE /api/equipos/:id — admin e IT
+// DELETE /api/equipos/:id — admin e IT (borrado suave, va a la papelera)
 app.delete('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
-    await pool.query('DELETE FROM equipos WHERE id = $1', [req.params.id]);
+    const { rows: [eq] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
+    if (!eq) return res.status(404).json({ error: 'No encontrado' });
+    await pool.query('UPDATE equipos SET eliminado_en = NOW() WHERE id = $1', [req.params.id]);
+    const label = eq.id_activo || eq.numero_serie || String(eq.id);
+    await pool.query(
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
+       VALUES ($1,$2,$3,$4,'eliminacion','','Movido a la papelera')`,
+      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/equipos/:id/restaurar — solo admin
+app.put('/api/equipos/:id/restaurar', requireRol('admin'), async (req, res) => {
+  try {
+    const { rows: [eq] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
+    if (!eq) return res.status(404).json({ error: 'No encontrado' });
+    await pool.query('UPDATE equipos SET eliminado_en = NULL WHERE id = $1', [req.params.id]);
+    const label = eq.id_activo || eq.numero_serie || String(eq.id);
+    await pool.query(
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
+       VALUES ($1,$2,$3,$4,'restauracion','','Restaurado desde la papelera')`,
+      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/equipos/:id/definitivo — borrado permanente, solo admin, solo desde la papelera
+app.delete('/api/equipos/:id/definitivo', requireRol('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      'DELETE FROM equipos WHERE id = $1 AND eliminado_en IS NOT NULL RETURNING id',
+      [req.params.id]
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'El equipo no está en la papelera' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -193,7 +254,8 @@ app.get('/api/opciones', async (req, res) => {
 // GET /api/exportar — admin e IT
 app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { rows: equipos } = await pool.query('SELECT * FROM equipos ORDER BY piso, id_activo');
+    const { q, params } = buildEquiposQuery(req.query);
+    const { rows: equipos } = await pool.query(q, params);
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Equipos');
     const cols = [

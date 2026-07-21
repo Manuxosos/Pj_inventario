@@ -34,10 +34,14 @@ async function initSchema() {
       adaptador_tplink TEXT DEFAULT '',
       estuche          TEXT DEFAULT '',
       piso             TEXT DEFAULT '',
+      eliminado_en     TIMESTAMPTZ,
       created_at       TIMESTAMPTZ DEFAULT NOW(),
       updated_at       TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // Migracion: agregar eliminado_en si la tabla ya existia (borrado suave / papelera)
+  await pool.query(`ALTER TABLE equipos ADD COLUMN IF NOT EXISTS eliminado_en TIMESTAMPTZ`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS usuarios (
