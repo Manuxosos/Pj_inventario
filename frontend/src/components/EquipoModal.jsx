@@ -2,19 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { createEquipo, updateEquipo, getHistorialEquipo, updateNota, getOpciones } from '../api';
 import { MessageSquare, MessageSquarePlus } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
+import { CAMPO_LABEL } from '../campoLabel';
 import './EquipoModal.css';
 
 const OTRO_PISO = '__otro__';
-
-const CAMPO_LABEL = {
-  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Team / Agente',
-  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
-  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº de Serie',
-  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
-  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
-  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
-  piso:'Piso', creacion:'Creación', eliminacion:'Eliminación', restauracion:'Restauración',
-};
 
 function fmtDate(iso) {
   return new Date(iso).toLocaleString('es-CL', {

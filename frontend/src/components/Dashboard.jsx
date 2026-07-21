@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Laptop, Users, Package, AlertCircle } from 'lucide-react';
 import PisoAgentesModal from './PisoAgentesModal';
+import { CAMPO_LABEL } from '../campoLabel';
 import './Dashboard.css';
 
 const C = {
@@ -52,16 +53,6 @@ const CustomLegend = ({ payload }) => (
     ))}
   </ul>
 );
-
-const CAMPO_LABEL = {
-  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Agente',
-  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
-  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº Serie',
-  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
-  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
-  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche',
-  piso:'Piso', creacion:'Creación', eliminacion:'Eliminación', restauracion:'Restauración',
-};
 
 function fmtDate(iso) {
   return new Date(iso).toLocaleString('es-CL', {

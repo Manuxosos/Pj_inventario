@@ -41,15 +41,6 @@ const EQUIPO_FIELDS   = [
   'adaptador_tplink','estuche','piso',
 ];
 
-const CAMPO_LABEL = {
-  id_activo:'ID Activo', cargador:'Cargador', id_ex:'ID EX', team:'Team / Agente',
-  marca_modelo:'Marca / Modelo', procesador:'Procesador', ram:'RAM',
-  disco_duro:'Disco Duro', so:'Sistema Operativo', numero_serie:'Nº de Serie',
-  usuario:'Usuario asignado', estado:'Estado', observacion:'Observación',
-  responsable:'Responsable', audifonos:'Audífonos', mouse:'Mouse',
-  monitor:'Monitor', adaptador_tplink:'Adaptador Tp-Link', estuche:'Estuche', piso:'Piso',
-};
-
 // ── Login (público) ───────────────────────────────────────────────────────────
 app.post('/api/login', async (req, res) => {
   try {
@@ -157,7 +148,7 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
 // PUT /api/equipos/:id — solo admin e IT
 app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { rows: [old] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
+    const { rows: [old] } = await pool.query('SELECT * FROM equipos WHERE id = $1 AND eliminado_en IS NULL', [req.params.id]);
     if (!old) return res.status(404).json({ error: 'No encontrado' });
 
     const vals = EQUIPO_FIELDS.map(f => {
