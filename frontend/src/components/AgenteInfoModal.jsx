@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Laptop } from 'lucide-react';
 import { getEquipos } from '../api';
+import { colorAgente } from '../agenteColor';
 import './AgenteInfoModal.css';
 
 function iniciales(nombre) {
@@ -22,12 +23,16 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
     getEquipos({ responsable: nombre }).then(d => { setEquipos(d); setLoading(false); });
   }, [nombre]);
 
+  const color = colorAgente(nombre);
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal-box agente-info-box">
         <div className="modal-header">
           <div className="agente-info-encabezado">
-            <span className="agente-info-avatar">{iniciales(nombre)}</span>
+            <span className="agente-info-avatar" style={{ background: color, boxShadow: `0 0 10px ${color}66` }}>
+              {iniciales(nombre)}
+            </span>
             <div>
               <h2>{nombre}</h2>
               <p className="agente-info-sub">{piso} · Mesa {mesa}</p>

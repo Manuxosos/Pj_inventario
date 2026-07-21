@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut, LayoutGrid } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut, Armchair } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
@@ -118,7 +118,7 @@ export default function App() {
               <CheckSquare size={15} /> Tareas
             </button>
             <button className={`nav-tab ${tab === 'agentes' ? 'active' : ''}`} onClick={() => setTab('agentes')}>
-              <LayoutGrid size={15} /> Agentes
+              <Armchair size={15} /> Agentes
             </button>
             {esAdmin && (
               <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => setTab('usuarios')}>

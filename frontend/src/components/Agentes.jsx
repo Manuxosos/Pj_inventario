@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getAgentesTablero, moverAgente } from '../api';
 import AgenteInfoModal from './AgenteInfoModal';
+import { colorAgente } from '../agenteColor';
 import './Agentes.css';
 
 function iniciales(nombre) {
@@ -13,6 +14,7 @@ function splitFilas(agentes) {
 }
 
 function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick }) {
+  const color = colorAgente(nombre);
   return (
     <div
       className={`asiento ${draggable ? 'asiento-draggable' : 'asiento-clickable'} ${dragging ? 'asiento-dragging' : ''}`}
@@ -21,6 +23,7 @@ function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick 
       onDragEnd={draggable ? onDragEnd : undefined}
       onClick={onClick}
       title="Ver información del agente"
+      style={{ '--agente-color': color, '--agente-glow': `${color}66` }}
     >
       <span className="asiento-avatar">{iniciales(nombre)}</span>
       <span className="asiento-nombre">{nombre}</span>
