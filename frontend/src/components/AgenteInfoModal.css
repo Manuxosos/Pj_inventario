@@ -41,13 +41,11 @@
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 
 .agente-info-equipo:hover {
-  border-color: rgba(0,245,255,0.35);
-  background: rgba(0,245,255,0.04);
+  border-color: rgba(0,245,255,0.2);
 }
 
 .agente-info-equipo-icon { color: var(--neon-cyan); flex-shrink: 0; }
@@ -62,3 +60,9 @@
 
 .agente-info-equipo-modelo { font-size: 13px; font-weight: 600; color: var(--text); }
 .agente-info-equipo-serie  { font-size: 11px; color: var(--text-muted); }
+
+.agente-info-equipo-acciones {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}

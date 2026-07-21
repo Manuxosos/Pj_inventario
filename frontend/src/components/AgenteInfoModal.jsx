@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Laptop } from 'lucide-react';
+import { X, Laptop, Eye, Pencil } from 'lucide-react';
 import { getEquipos } from '../api';
 import { colorAgente } from '../agenteColor';
 import './AgenteInfoModal.css';
@@ -15,7 +15,7 @@ const ESTADO_BADGE = {
   'De baja':     'badge-red',
 };
 
-export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEquipo }) {
+export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEquipo, onEditEquipo }) {
   const [equipos, setEquipos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,12 +50,7 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
           ) : (
             <div className="agente-info-equipos">
               {equipos.map(eq => (
-                <div
-                  key={eq.id}
-                  className="agente-info-equipo"
-                  onClick={() => { onOpenEquipo?.(eq.id); onClose(); }}
-                  title="Ver detalle del equipo"
-                >
+                <div key={eq.id} className="agente-info-equipo">
                   <Laptop size={16} className="agente-info-equipo-icon" />
                   <div className="agente-info-equipo-datos">
                     <span className="agente-info-equipo-modelo">{eq.marca_modelo || 'Sin modelo'}</span>
@@ -64,6 +59,24 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
                   {eq.estado && (
                     <span className={`badge ${ESTADO_BADGE[eq.estado] || 'badge-gray'}`}>{eq.estado}</span>
                   )}
+                  <div className="agente-info-equipo-acciones">
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => { onOpenEquipo?.(eq.id); onClose(); }}
+                      title="Ver detalle"
+                    >
+                      <Eye size={14} />
+                    </button>
+                    {onEditEquipo && (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={() => { onEditEquipo(eq.id); onClose(); }}
+                        title="Editar"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

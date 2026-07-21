@@ -31,7 +31,7 @@ function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick 
   );
 }
 
-export default function Agentes({ rol, onOpenEquipo }) {
+export default function Agentes({ rol, onOpenEquipo, onEditEquipo }) {
   const puedeMover = rol === 'admin' || rol === 'it';
   const [tablero, setTablero] = useState({});
   const [pisos, setPisos] = useState([]);
@@ -158,6 +158,7 @@ export default function Agentes({ rol, onOpenEquipo }) {
           mesa={agenteSel.mesa}
           onClose={() => setAgenteSel(null)}
           onOpenEquipo={onOpenEquipo}
+          onEditEquipo={onEditEquipo}
         />
       )}
     </div>

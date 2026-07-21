@@ -48,6 +48,15 @@ export default function App() {
     }
   };
 
+  const handleEditEquipo = async (equipoId) => {
+    try {
+      const equipo = await getEquipo(equipoId);
+      setModal({ mode: 'edit', equipo });
+    } catch (err) {
+      showToast('No se pudo abrir el equipo', 'error');
+    }
+  };
+
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
   }, []);
@@ -166,7 +175,13 @@ export default function App() {
           />
         )}
         {tab === 'tareas'   && <Tareas rol={rol} />}
-        {tab === 'agentes'  && <Agentes rol={rol} onOpenEquipo={handleOpenEquipo} />}
+        {tab === 'agentes'  && (
+          <Agentes
+            rol={rol}
+            onOpenEquipo={handleOpenEquipo}
+            onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+          />
+        )}
         {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
       </main>
 
