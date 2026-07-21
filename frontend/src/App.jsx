@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut, Armchair } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, Download, PlusCircle, Monitor, LogOut, Armchair, Search } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
 import Usuarios from './components/Usuarios';
 import Tareas from './components/Tareas';
 import Agentes from './components/Agentes';
+import GlobalSearch from './components/GlobalSearch';
 import Login from './components/Login';
 import { exportarExcel, getEquipo } from './api';
 import Toast from './components/Toast';
@@ -28,6 +29,7 @@ export default function App() {
   const [refresh, setRefresh] = useState(0);
   const [dashboardFilter, setDashboardFilter] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
+  const [buscadorAbierto, setBuscadorAbierto] = useState(false);
 
   const userInfo = autenticado ? getUserInfo() : null;
   const rol      = userInfo?.rol || 'observador';
@@ -60,6 +62,18 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
   }, []);
+
+  useEffect(() => {
+    if (!autenticado) return;
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setBuscadorAbierto(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [autenticado]);
 
   if (!autenticado) return <Login onLogin={() => setAutenticado(true)} />;
 
@@ -137,6 +151,9 @@ export default function App() {
           </nav>
 
           <div className="header-actions">
+            <button className="btn-icon-neon" onClick={() => setBuscadorAbierto(true)} title="Buscar (Ctrl+K)">
+              <Search size={16} />
+            </button>
             {userInfo && (
               <div className="user-badge">
                 <div>
@@ -197,6 +214,14 @@ export default function App() {
 
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
+      )}
+
+      {buscadorAbierto && (
+        <GlobalSearch
+          onClose={() => setBuscadorAbierto(false)}
+          onOpenEquipo={handleOpenEquipo}
+          onGoToTab={setTab}
+        />
       )}
     </div>
   );

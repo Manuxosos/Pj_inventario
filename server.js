@@ -307,12 +307,12 @@ app.get('/api/tareas', async (req, res) => {
 
 app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { titulo, descripcion, estado, piso, asignado_id, asignado_nombre } = req.body;
+    const { titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre } = req.body;
     if (!titulo) return res.status(400).json({ error: 'El título es obligatorio' });
     const { rows } = await pool.query(
-      `INSERT INTO tareas (titulo, descripcion, estado, piso, asignado_id, asignado_nombre, creado_id, creado_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [titulo, descripcion || '', estado || 'Pendiente', piso || '',
+      `INSERT INTO tareas (titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre, creado_id, creado_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      [titulo, descripcion || '', estado || 'Pendiente', piso || '', fecha_limite || null,
        asignado_id || null, asignado_nombre || '',
        req.user.id, req.user.nombre || req.user.usuario]
     );
@@ -324,11 +324,11 @@ app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
 
 app.put('/api/tareas/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { titulo, descripcion, estado, piso, asignado_id, asignado_nombre } = req.body;
+    const { titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre } = req.body;
     await pool.query(
-      `UPDATE tareas SET titulo=$1, descripcion=$2, estado=$3, piso=$4, asignado_id=$5, asignado_nombre=$6
-       WHERE id=$7`,
-      [titulo, descripcion || '', estado, piso || '', asignado_id || null, asignado_nombre || '', req.params.id]
+      `UPDATE tareas SET titulo=$1, descripcion=$2, estado=$3, piso=$4, fecha_limite=$5, asignado_id=$6, asignado_nombre=$7
+       WHERE id=$8`,
+      [titulo, descripcion || '', estado, piso || '', fecha_limite || null, asignado_id || null, asignado_nombre || '', req.params.id]
     );
     res.json({ ok: true });
   } catch (err) {

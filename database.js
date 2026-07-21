@@ -93,6 +93,7 @@ async function initSchema() {
       estado          TEXT NOT NULL DEFAULT 'Pendiente'
                       CHECK (estado IN ('Pendiente','En curso','Finalizado','Cancelado')),
       piso            TEXT DEFAULT '',
+      fecha_limite    DATE,
       asignado_id     INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
       asignado_nombre TEXT DEFAULT '',
       creado_id       INTEGER,
@@ -101,6 +102,9 @@ async function initSchema() {
       updated_at      TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+
+  // Migracion: agregar fecha_limite si la tabla ya existia de antes
+  await pool.query(`ALTER TABLE tareas ADD COLUMN IF NOT EXISTS fecha_limite DATE`);
 
   await pool.query(`
     DO $$ BEGIN

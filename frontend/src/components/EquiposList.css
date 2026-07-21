@@ -83,6 +83,42 @@
 
 .equip-row:hover { background: var(--table-hover); }
 .equip-row:last-child td { border-bottom: none; }
+.equip-row-selected { background: rgba(0,245,255,0.05); }
+
+.checkbox-th, .checkbox-td { width: 34px; padding-left: 16px; }
+.checkbox-th input, .checkbox-td input { cursor: pointer; accent-color: var(--neon-cyan); width: 15px; height: 15px; }
+
+.bulk-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(4,12,20,0.97);
+  border: 1px solid rgba(0,245,255,0.25);
+  box-shadow: 0 0 30px rgba(0,245,255,0.12), 0 12px 40px rgba(0,0,0,0.5);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.bulk-bar-count {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  white-space: nowrap;
+}
+
+.bulk-bar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bulk-bar-group select { min-width: 150px; padding: 6px 10px; font-size: 12.5px; }
+
+.bulk-bar-cerrar { margin-left: 4px; }
 
 .id-badge {
   background: var(--badge-id-bg);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { getEquipos, getOpciones, deleteEquipo } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
+import { getEquipos, getOpciones, deleteEquipo, updateEquipo } from '../api';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import './EquiposList.css';
 
@@ -45,8 +45,12 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   });
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null); // { id, label }
+  const [confirmDelete, setConfirmDelete] = useState(null); // { id, label } | { ids: [] }
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [seleccion, setSeleccion] = useState(new Set());
+  const [nuevoEstadoLote, setNuevoEstadoLote] = useState('');
+  const [nuevoPisoLote, setNuevoPisoLote] = useState('');
+  const [aplicandoLote, setAplicandoLote] = useState(false);
 
   const handleSort = (key) => {
     setSortConfig(prev => prev.key === key
@@ -89,16 +93,56 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
       setEquipos(data);
       setLoading(false);
     });
+    setSeleccion(new Set());
   }, [refresh, filters]);
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
+    if (confirmDelete.ids) {
+      setAplicandoLote(true);
+      await Promise.all(confirmDelete.ids.map(id => deleteEquipo(id)));
+      const idsSet = new Set(confirmDelete.ids);
+      setEquipos(e => e.filter(x => !idsSet.has(x.id)));
+      setTodos(e => e.filter(x => !idsSet.has(x.id)));
+      setSeleccion(new Set());
+      setAplicandoLote(false);
+      setConfirmDelete(null);
+      return;
+    }
     setDeleting(confirmDelete.id);
     setConfirmDelete(null);
     await deleteEquipo(confirmDelete.id);
     setEquipos(e => e.filter(x => x.id !== confirmDelete.id));
     setTodos(e => e.filter(x => x.id !== confirmDelete.id));
     setDeleting(null);
+  };
+
+  const toggleSeleccion = (id) => {
+    setSeleccion(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSeleccionarTodos = () => {
+    setSeleccion(prev =>
+      prev.size === equiposOrdenados.length ? new Set() : new Set(equiposOrdenados.map(e => e.id))
+    );
+  };
+
+  const aplicarCambioLote = async (campo, valor) => {
+    if (!valor || seleccion.size === 0) return;
+    setAplicandoLote(true);
+    const seleccionados = equipos.filter(e => seleccion.has(e.id));
+    await Promise.all(seleccionados.map(eq => updateEquipo(eq.id, { ...eq, [campo]: valor })));
+    const actualizar = list => list.map(e => seleccion.has(e.id) ? { ...e, [campo]: valor } : e);
+    setEquipos(actualizar);
+    setTodos(actualizar);
+    setNuevoEstadoLote('');
+    setNuevoPisoLote('');
+    setAplicandoLote(false);
+    setSeleccion(new Set());
   };
 
   const enUso   = todos.filter(e => e.estado === 'En uso').length;
@@ -174,6 +218,16 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           <table className="equip-table">
             <thead>
               <tr>
+                {puedeEditar && (
+                  <th className="checkbox-th">
+                    <input
+                      type="checkbox"
+                      checked={seleccion.size > 0 && seleccion.size === equiposOrdenados.length}
+                      ref={el => { if (el) el.indeterminate = seleccion.size > 0 && seleccion.size < equiposOrdenados.length; }}
+                      onChange={toggleSeleccionarTodos}
+                    />
+                  </th>
+                )}
                 {COLUMNAS.map(col => {
                   const active = sortConfig.key === col.key;
                   return (
@@ -192,7 +246,12 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
             </thead>
             <tbody>
               {equiposOrdenados.map(eq => (
-                <tr key={eq.id} className="equip-row">
+                <tr key={eq.id} className={`equip-row ${seleccion.has(eq.id) ? 'equip-row-selected' : ''}`}>
+                  {puedeEditar && (
+                    <td className="checkbox-td">
+                      <input type="checkbox" checked={seleccion.has(eq.id)} onChange={() => toggleSeleccion(eq.id)} />
+                    </td>
+                  )}
                   <td><span className="id-badge">{eq.id_activo || '—'}</span></td>
                   <td className="text-muted">{eq.piso || '—'}</td>
                   <td className="model-cell">{eq.marca_modelo || '—'}</td>
@@ -227,11 +286,50 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
 
       {confirmDelete && (
         <ConfirmModal
-          title="Eliminar equipo"
-          message={`¿Estás seguro de que querés eliminar el equipo "${confirmDelete.label}"? Esta acción no se puede deshacer.`}
+          title={confirmDelete.ids ? `Eliminar ${confirmDelete.ids.length} equipos` : 'Eliminar equipo'}
+          message={confirmDelete.ids
+            ? `¿Estás seguro de que querés eliminar los ${confirmDelete.ids.length} equipos seleccionados? Esta acción no se puede deshacer.`
+            : `¿Estás seguro de que querés eliminar el equipo "${confirmDelete.label}"? Esta acción no se puede deshacer.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
         />
+      )}
+
+      {puedeEditar && seleccion.size > 0 && (
+        <div className="bulk-bar">
+          <span className="bulk-bar-count">{seleccion.size} seleccionado{seleccion.size === 1 ? '' : 's'}</span>
+
+          <div className="bulk-bar-group">
+            <select className="form-input" value={nuevoEstadoLote} onChange={e => setNuevoEstadoLote(e.target.value)} disabled={aplicandoLote}>
+              <option value="">Cambiar estado a...</option>
+              {ESTADOS.map(e => <option key={e} value={e}>{e}</option>)}
+            </select>
+            <button className="btn btn-secondary btn-sm" disabled={!nuevoEstadoLote || aplicandoLote}
+              onClick={() => aplicarCambioLote('estado', nuevoEstadoLote)}>
+              Aplicar
+            </button>
+          </div>
+
+          <div className="bulk-bar-group">
+            <select className="form-input" value={nuevoPisoLote} onChange={e => setNuevoPisoLote(e.target.value)} disabled={aplicandoLote}>
+              <option value="">Cambiar piso a...</option>
+              {opciones.pisos.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <button className="btn btn-secondary btn-sm" disabled={!nuevoPisoLote || aplicandoLote}
+              onClick={() => aplicarCambioLote('piso', nuevoPisoLote)}>
+              Aplicar
+            </button>
+          </div>
+
+          <button className="btn btn-danger btn-sm" disabled={aplicandoLote}
+            onClick={() => setConfirmDelete({ ids: [...seleccion] })}>
+            <Trash2 size={13} /> Eliminar
+          </button>
+
+          <button className="btn-icon-neon bulk-bar-cerrar" onClick={() => setSeleccion(new Set())} title="Cancelar selección">
+            <X size={15} />
+          </button>
+        </div>
       )}
     </div>
   );

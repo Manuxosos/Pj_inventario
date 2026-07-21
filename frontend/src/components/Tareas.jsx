@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getTareas, createTarea, updateTarea, deleteTarea, getUsuariosAsign } from '../api';
-import { PlusCircle, Pencil, Trash2, CheckCircle2, Clock, XCircle, PlayCircle } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, CheckCircle2, Clock, XCircle, PlayCircle, AlertTriangle } from 'lucide-react';
 import './Tareas.css';
 
 const ESTADOS = ['Pendiente', 'En curso', 'Finalizado', 'Cancelado'];
@@ -12,10 +12,16 @@ const ESTADO_META = {
   'Cancelado':  { cls: 'est-cancel',  Icon: XCircle },
 };
 
-const emptyForm = { titulo: '', descripcion: '', estado: 'Pendiente', piso: '', asignado_id: '', asignado_nombre: '' };
+const emptyForm = { titulo: '', descripcion: '', estado: 'Pendiente', piso: '', fecha_limite: '', asignado_id: '', asignado_nombre: '' };
 
 function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function estaAtrasada(t) {
+  if (!t.fecha_limite || t.estado === 'Finalizado' || t.estado === 'Cancelado') return false;
+  const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  return new Date(t.fecha_limite) < hoy;
 }
 
 export default function Tareas({ rol }) {
@@ -97,13 +103,13 @@ export default function Tareas({ rol }) {
                 <div className="kanban-cards">
                   {items.length === 0 && <p className="kanban-empty">Sin tareas</p>}
                   {items.map(t => (
-                    <div key={t.id} className="tarea-card card">
+                    <div key={t.id} className={`tarea-card card ${estaAtrasada(t) ? 'tarea-card-atrasada' : ''}`}>
                       <div className="tarea-card-top">
                         <p className="tarea-titulo">{t.titulo}</p>
                         {puedeEditar && (
                           <div className="tarea-actions">
                             <button className="btn btn-ghost btn-sm" title="Editar"
-                              onClick={() => setModal({ mode: 'edit', data: { ...t } })}>
+                              onClick={() => setModal({ mode: 'edit', data: { ...t, fecha_limite: t.fecha_limite ? String(t.fecha_limite).slice(0, 10) : '' } })}>
                               <Pencil size={13} />
                             </button>
                             {esAdmin && (
@@ -120,6 +126,12 @@ export default function Tareas({ rol }) {
                       <div className="tarea-meta">
                         {t.piso && <span className="tarea-tag">{t.piso}</span>}
                         {t.asignado_nombre && <span className="tarea-tag tarea-tag-blue">👤 {t.asignado_nombre}</span>}
+                        {t.fecha_limite && (
+                          <span className={`tarea-tag ${estaAtrasada(t) ? 'tarea-tag-atrasada' : 'tarea-tag-fecha'}`}>
+                            {estaAtrasada(t) && <AlertTriangle size={11} />}
+                            {fmtDate(t.fecha_limite)}
+                          </span>
+                        )}
                       </div>
                       <p className="tarea-fecha">Creado por {t.creado_nombre} · {fmtDate(t.created_at)}</p>
                     </div>
@@ -215,6 +227,12 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
                 <input className="form-input" value={form.piso}
                   onChange={e => set('piso', e.target.value)}
                   placeholder="Ej: PISO 5" />
+              </div>
+
+              <div className="form-group full-width">
+                <label className="form-label">Fecha límite (opcional)</label>
+                <input type="date" className="form-input" value={form.fecha_limite || ''}
+                  onChange={e => set('fecha_limite', e.target.value)} />
               </div>
 
               <div className="form-group full-width">

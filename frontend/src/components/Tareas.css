@@ -78,6 +78,11 @@
 }
 .tarea-card:hover { border-color: rgba(0,245,255,0.2); transform: translateY(-1px); }
 
+.tarea-card-atrasada {
+  border-color: rgba(255,61,127,0.35);
+  box-shadow: 0 0 0 1px rgba(255,61,127,0.1);
+}
+
 .tarea-card-top {
   display: flex;
   align-items: flex-start;
@@ -117,6 +122,19 @@
   background: rgba(0,245,255,0.08);
   color: var(--neon-cyan);
   border-color: rgba(0,245,255,0.2);
+}
+
+.tarea-tag-fecha {
+  background: rgba(58,106,136,0.15);
+}
+
+.tarea-tag-atrasada {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255,61,127,0.12);
+  color: var(--neon-pink);
+  border-color: rgba(255,61,127,0.3);
 }
 
 .tarea-fecha {
