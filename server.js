@@ -364,7 +364,7 @@ app.get('/api/usuarios/asignables', async (req, res) => {
 app.get('/api/agentes/tablero', async (req, res) => {
   try {
     const { rows: equipos } = await pool.query(
-      "SELECT piso, responsable FROM equipos WHERE responsable IS NOT NULL AND responsable != '' AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'"
+      "SELECT piso, responsable, estado FROM equipos WHERE responsable IS NOT NULL AND responsable != '' AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'"
     );
 
     const porAgente = new Map();
@@ -372,19 +372,28 @@ app.get('/api/agentes/tablero', async (req, res) => {
       const nombre = (e.responsable || '').trim();
       if (!nombre) continue;
       const key = nombre.toUpperCase();
-      if (!porAgente.has(key)) porAgente.set(key, { nombre, pisos: new Map() });
+      if (!porAgente.has(key)) porAgente.set(key, { nombre, pisos: new Map(), estados: new Set() });
       const info = porAgente.get(key);
       info.pisos.set(e.piso, (info.pisos.get(e.piso) || 0) + 1);
+      if (e.estado) info.estados.add(e.estado);
+    }
+
+    // estado a mostrar en el anillo del avatar: prioriza lo mas urgente/notable
+    // entre todos los equipos de ese agente
+    const PRIORIDAD_ESTADO = ['En revisión', 'De baja', 'En uso', 'Disponible'];
+    function estadoPrincipal(estados) {
+      for (const e of PRIORIDAD_ESTADO) if (estados.has(e)) return e;
+      return null;
     }
 
     // piso derivado = el más frecuente entre los equipos de ese agente
-    const derivados = new Map(); // key -> { nombre, piso }
+    const derivados = new Map(); // key -> { nombre, piso, estado }
     for (const [key, info] of porAgente) {
       let mejorPiso = null, mejorCount = -1;
       for (const [piso, count] of info.pisos) {
         if (count > mejorCount) { mejorPiso = piso; mejorCount = count; }
       }
-      derivados.set(key, { nombre: info.nombre, piso: mejorPiso });
+      derivados.set(key, { nombre: info.nombre, piso: mejorPiso, estado: estadoPrincipal(info.estados) });
     }
 
     const { rows: asientosRows } = await pool.query('SELECT * FROM asientos_agentes');
@@ -416,11 +425,11 @@ app.get('/api/agentes/tablero', async (req, res) => {
     for (const [key, info] of derivados) {
       if (!tablero[info.piso]) tablero[info.piso] = { 1: [], 2: [] };
       const mesa = asientosMap.get(key)?.mesa === 2 ? 2 : 1;
-      tablero[info.piso][mesa].push(info.nombre);
+      tablero[info.piso][mesa].push({ nombre: info.nombre, estado: info.estado });
     }
     for (const piso of Object.keys(tablero)) {
-      tablero[piso][1].sort((a, b) => a.localeCompare(b, 'es'));
-      tablero[piso][2].sort((a, b) => a.localeCompare(b, 'es'));
+      tablero[piso][1].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      tablero[piso][2].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
     }
 
     res.json({ pisos: Object.keys(tablero).sort(), tablero });

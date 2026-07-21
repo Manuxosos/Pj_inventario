@@ -139,19 +139,34 @@
   }
 }
 
+/* Anillo exterior: color segun el estado del equipo del agente
+   (En uso / Disponible / En revisión / De baja) */
+.asiento-anillo {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, transform 0.15s;
+}
+
 .asiento-avatar {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   background: var(--agente-color, var(--neon-cyan));
   color: #00131a;
   flex-shrink: 0;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: box-shadow 0.15s;
   animation: asiento-resplandor 2.4s ease-in-out infinite;
 }
 
@@ -171,9 +186,9 @@
 .asiento-draggable:active { cursor: grabbing; }
 .asiento-clickable { cursor: pointer; }
 
+.asiento:hover .asiento-anillo { transform: scale(1.12); }
 .asiento:hover .asiento-avatar {
   animation-play-state: paused;
-  transform: scale(1.12);
   box-shadow: 0 0 16px var(--agente-color, var(--neon-cyan));
 }
 .asiento:hover .asiento-nombre { color: var(--agente-color, var(--neon-cyan)); }

@@ -4,6 +4,13 @@ import AgenteInfoModal from './AgenteInfoModal';
 import { colorAgente } from '../agenteColor';
 import './Agentes.css';
 
+const ESTADO_RING = {
+  'En uso':      '#00e5ff',
+  'Disponible':  '#00e676',
+  'En revisión': '#ffca28',
+  'De baja':     '#f48fb1',
+};
+
 function iniciales(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 }
@@ -13,8 +20,9 @@ function splitFilas(agentes) {
   return { arriba: agentes.slice(0, mitad), abajo: agentes.slice(mitad) };
 }
 
-function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick }) {
+function Asiento({ nombre, estado, draggable, dragging, onDragStart, onDragEnd, onClick }) {
   const color = colorAgente(nombre);
+  const anillo = ESTADO_RING[estado] || 'transparent';
   return (
     <div
       className={`asiento ${draggable ? 'asiento-draggable' : 'asiento-clickable'} ${dragging ? 'asiento-dragging' : ''}`}
@@ -22,10 +30,12 @@ function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick 
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
       onClick={onClick}
-      title="Ver información del agente"
+      title={estado ? `${nombre} · ${estado}` : nombre}
       style={{ '--agente-color': color, '--agente-glow': `${color}66` }}
     >
-      <span className="asiento-avatar">{iniciales(nombre)}</span>
+      <span className="asiento-anillo" style={{ borderColor: anillo }}>
+        <span className="asiento-avatar">{iniciales(nombre)}</span>
+      </span>
       <span className="asiento-nombre">{nombre}</span>
     </div>
   );
@@ -119,22 +129,22 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo }) {
                         ) : (
                           <>
                             <div className="mesa-fila mesa-fila-arriba">
-                              {arriba.map(nombre => (
-                                <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
-                                  dragging={dragging === nombre}
-                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)}
+                              {arriba.map(a => (
+                                <Asiento key={a.nombre} nombre={a.nombre} estado={a.estado} draggable={puedeMover}
+                                  dragging={dragging === a.nombre}
+                                  onDragStart={(e) => handleDragStart(e, a.nombre, piso, mesa)}
                                   onDragEnd={handleDragEnd}
-                                  onClick={() => setAgenteSel({ nombre, piso, mesa })} />
+                                  onClick={() => setAgenteSel({ nombre: a.nombre, piso, mesa })} />
                               ))}
                             </div>
                             <div className="mesa-tablero" />
                             <div className="mesa-fila mesa-fila-abajo">
-                              {abajo.map(nombre => (
-                                <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
-                                  dragging={dragging === nombre}
-                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)}
+                              {abajo.map(a => (
+                                <Asiento key={a.nombre} nombre={a.nombre} estado={a.estado} draggable={puedeMover}
+                                  dragging={dragging === a.nombre}
+                                  onDragStart={(e) => handleDragStart(e, a.nombre, piso, mesa)}
                                   onDragEnd={handleDragEnd}
-                                  onClick={() => setAgenteSel({ nombre, piso, mesa })} />
+                                  onClick={() => setAgenteSel({ nombre: a.nombre, piso, mesa })} />
                               ))}
                             </div>
                           </>
