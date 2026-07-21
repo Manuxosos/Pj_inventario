@@ -166,7 +166,7 @@ export default function App() {
           />
         )}
         {tab === 'tareas'   && <Tareas rol={rol} />}
-        {tab === 'agentes'  && <Agentes rol={rol} />}
+        {tab === 'agentes'  && <Agentes rol={rol} onOpenEquipo={handleOpenEquipo} />}
         {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
       </main>
 

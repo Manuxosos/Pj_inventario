@@ -68,12 +68,13 @@ app.use('/api', verificarToken);
 // GET /api/equipos
 app.get('/api/equipos', async (req, res) => {
   try {
-    const { piso, estado, estadoIn, search, ram, modelo, accesorio } = req.query;
+    const { piso, estado, estadoIn, search, ram, modelo, accesorio, responsable } = req.query;
     const { params, add } = mkParams();
     let q = 'SELECT * FROM equipos WHERE TRUE';
 
     if (piso)   q += ` AND piso = ${add(piso)}`;
     if (estado) q += ` AND estado = ${add(estado)}`;
+    if (responsable) q += ` AND UPPER(TRIM(responsable)) = ${add(responsable.trim().toUpperCase())}`;
     if (estadoIn) {
       const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
       if (vals.length) q += ` AND estado IN (${vals.map(v => add(v)).join(',')})`;

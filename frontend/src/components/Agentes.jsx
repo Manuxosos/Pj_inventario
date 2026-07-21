@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getAgentesTablero, moverAgente } from '../api';
+import AgenteInfoModal from './AgenteInfoModal';
 import './Agentes.css';
 
 function iniciales(nombre) {
@@ -11,13 +12,15 @@ function splitFilas(agentes) {
   return { arriba: agentes.slice(0, mitad), abajo: agentes.slice(mitad) };
 }
 
-function Asiento({ nombre, draggable, onDragStart }) {
+function Asiento({ nombre, draggable, dragging, onDragStart, onDragEnd, onClick }) {
   return (
     <div
-      className={`asiento ${draggable ? 'asiento-draggable' : ''}`}
+      className={`asiento ${draggable ? 'asiento-draggable' : 'asiento-clickable'} ${dragging ? 'asiento-dragging' : ''}`}
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
-      title={draggable ? 'Arrastrá para mover' : nombre}
+      onDragEnd={draggable ? onDragEnd : undefined}
+      onClick={onClick}
+      title="Ver información del agente"
     >
       <span className="asiento-avatar">{iniciales(nombre)}</span>
       <span className="asiento-nombre">{nombre}</span>
@@ -25,13 +28,15 @@ function Asiento({ nombre, draggable, onDragStart }) {
   );
 }
 
-export default function Agentes({ rol }) {
+export default function Agentes({ rol, onOpenEquipo }) {
   const puedeMover = rol === 'admin' || rol === 'it';
   const [tablero, setTablero] = useState({});
   const [pisos, setPisos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dragOver, setDragOver] = useState(null); // `${piso}|${mesa}`
+  const [dragging, setDragging] = useState(null); // nombre del agente en vuelo
   const [moviendo, setMoviendo] = useState(false);
+  const [agenteSel, setAgenteSel] = useState(null); // { nombre, piso, mesa }
 
   const cargar = () => {
     getAgentesTablero().then(d => {
@@ -46,6 +51,12 @@ export default function Agentes({ rol }) {
   const handleDragStart = (e, agente, pisoOrigen, mesaOrigen) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ agente, pisoOrigen, mesaOrigen }));
     e.dataTransfer.effectAllowed = 'move';
+    setDragging(agente);
+  };
+
+  const handleDragEnd = () => {
+    setDragging(null);
+    setDragOver(null);
   };
 
   const handleDrop = async (e, pisoDestino, mesaDestino) => {
@@ -73,8 +84,8 @@ export default function Agentes({ rol }) {
           <h2 className="agentes-title">Agentes por piso</h2>
           <p className="agentes-sub">
             {puedeMover
-              ? 'Arrastrá un agente para moverlo de mesa o de piso. El cambio se refleja en el inventario y en el historial.'
-              : 'Vista de solo lectura de dónde está sentado cada agente.'}
+              ? 'Arrastrá un agente para moverlo de mesa o de piso, o hacé click para ver su información.'
+              : 'Hacé click en un agente para ver su información.'}
           </p>
         </div>
       </div>
@@ -107,14 +118,20 @@ export default function Agentes({ rol }) {
                             <div className="mesa-fila mesa-fila-arriba">
                               {arriba.map(nombre => (
                                 <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
-                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)} />
+                                  dragging={dragging === nombre}
+                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)}
+                                  onDragEnd={handleDragEnd}
+                                  onClick={() => setAgenteSel({ nombre, piso, mesa })} />
                               ))}
                             </div>
                             <div className="mesa-tablero" />
                             <div className="mesa-fila mesa-fila-abajo">
                               {abajo.map(nombre => (
                                 <Asiento key={nombre} nombre={nombre} draggable={puedeMover}
-                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)} />
+                                  dragging={dragging === nombre}
+                                  onDragStart={(e) => handleDragStart(e, nombre, piso, mesa)}
+                                  onDragEnd={handleDragEnd}
+                                  onClick={() => setAgenteSel({ nombre, piso, mesa })} />
                               ))}
                             </div>
                           </>
@@ -130,6 +147,16 @@ export default function Agentes({ rol }) {
       )}
 
       {moviendo && <div className="agentes-moviendo">Moviendo agente...</div>}
+
+      {agenteSel && (
+        <AgenteInfoModal
+          nombre={agenteSel.nombre}
+          piso={agenteSel.piso}
+          mesa={agenteSel.mesa}
+          onClose={() => setAgenteSel(null)}
+          onOpenEquipo={onOpenEquipo}
+        />
+      )}
     </div>
   );
 }

@@ -68,12 +68,14 @@
   gap: 6px;
   min-height: 130px;
   justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.18s, border-color 0.18s, transform 0.18s, box-shadow 0.18s;
 }
 
 .mesa-visual-over {
-  background: rgba(0,245,255,0.08);
-  border-color: rgba(0,245,255,0.4);
+  background: rgba(0,245,255,0.1);
+  border-color: rgba(0,245,255,0.5);
+  transform: scale(1.015);
+  box-shadow: 0 0 24px rgba(0,245,255,0.15);
 }
 
 .mesa-vacia {
@@ -102,6 +104,12 @@
   background: linear-gradient(180deg, rgba(0,245,255,0.10), rgba(0,245,255,0.02));
   border: 1px solid rgba(0,245,255,0.18);
   margin: 2px 8px;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.mesa-visual:hover .mesa-tablero {
+  border-color: rgba(0,245,255,0.3);
+  background: linear-gradient(180deg, rgba(0,245,255,0.16), rgba(0,245,255,0.03));
 }
 
 .asiento {
@@ -111,6 +119,12 @@
   gap: 4px;
   width: 62px;
   user-select: none;
+  animation: asiento-entrada 0.25s ease both;
+}
+
+@keyframes asiento-entrada {
+  from { opacity: 0; transform: translateY(4px) scale(0.9); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .asiento-avatar {
@@ -126,6 +140,7 @@
   color: #00131a;
   box-shadow: 0 0 8px rgba(0,245,255,0.35);
   flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .asiento-nombre {
@@ -137,12 +152,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: color 0.15s;
 }
 
 .asiento-draggable { cursor: grab; }
 .asiento-draggable:active { cursor: grabbing; }
-.asiento-draggable:hover .asiento-avatar {
-  box-shadow: 0 0 14px rgba(0,245,255,0.6);
+.asiento-clickable { cursor: pointer; }
+
+.asiento:hover .asiento-avatar {
+  transform: scale(1.12);
+  box-shadow: 0 0 16px rgba(0,245,255,0.65);
+}
+.asiento:hover .asiento-nombre { color: var(--neon-cyan); }
+
+.asiento-dragging {
+  opacity: 0.35;
+}
+.asiento-dragging .asiento-avatar {
+  box-shadow: 0 0 4px rgba(0,245,255,0.2);
 }
 
 .agentes-moviendo {
