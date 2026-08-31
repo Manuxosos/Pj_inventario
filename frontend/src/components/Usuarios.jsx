@@ -9,7 +9,7 @@ const ROL_CLASS = { admin: 'rol-admin', it: 'rol-it', observador: 'rol-obs' };
 
 const emptyForm = { nombre: '', usuario: '', password: '', rol: 'it', activo: true, edificio_id: '' };
 
-export default function Usuarios({ miId }) {
+export default function Usuarios({ miId, refresh }) {
   const [usuarios, setUsuarios] = useState([]);
   const [edificios, setEdificios] = useState([]);
   const [modal, setModal]         = useState(null);
@@ -27,7 +27,7 @@ export default function Usuarios({ miId }) {
 
   const cargarEdificios = () => getEdificios().then(setEdificios).catch(() => {});
 
-  useEffect(() => { cargar(); cargarEdificios(); }, []);
+  useEffect(() => { cargar(); cargarEdificios(); }, [refresh]);
 
   const nombreEdificio = (id) => edificios.find(e => e.id === id)?.nombre || '—';
 

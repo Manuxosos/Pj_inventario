@@ -202,7 +202,7 @@ export default function App() {
               refresh={refresh}
             />
           )}
-          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
+          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} refresh={refresh} />}
         </div>
       </main>
 
