@@ -224,6 +224,9 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   const hayFiltrosActivos = Object.values(filters).some(Boolean);
   const enUso   = todos.filter(e => e.estado === 'En uso').length;
   const enBodega = todos.filter(e => e.piso === 'BODEGA').length;
+  // Edificios de un solo piso (más bodega) no necesitan el filtro — se detecta
+  // solo según los pisos que realmente existan en los datos de ese edificio.
+  const mostrarFiltroPiso = opciones.pisos.length > 1;
 
   return (
     <div>
@@ -241,10 +244,12 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           <span className="stat-num">{enBodega}</span>
           <span className="stat-label">En Bodega</span>
         </div>
-        <div className="stat-card card">
-          <span className="stat-num">{opciones.pisos.length}</span>
-          <span className="stat-label">Pisos</span>
-        </div>
+        {mostrarFiltroPiso && (
+          <div className="stat-card card">
+            <span className="stat-num">{opciones.pisos.length}</span>
+            <span className="stat-label">Pisos</span>
+          </div>
+        )}
       </div>
 
       {/* Filters */}
@@ -255,14 +260,16 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           value={filters.search}
           onChange={e => setFilters(f => ({ ...f, search: e.target.value }))}
         />
-        <select
-          className="form-input"
-          value={filters.piso}
-          onChange={e => setFilters(f => ({ ...f, piso: e.target.value }))}
-        >
-          <option value="">Todos los pisos</option>
-          {opciones.pisos.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
+        {mostrarFiltroPiso && (
+          <select
+            className="form-input"
+            value={filters.piso}
+            onChange={e => setFilters(f => ({ ...f, piso: e.target.value }))}
+          >
+            <option value="">Todos los pisos</option>
+            {opciones.pisos.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
         {hayFiltrosActivos && (
           <button className="btn btn-ghost btn-sm" onClick={() => setFilters({ ...FILTROS_VACIOS })}>
             Limpiar
