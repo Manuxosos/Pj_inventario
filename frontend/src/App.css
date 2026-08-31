@@ -34,6 +34,8 @@
 
 .header-sub { font-size: 11px; color: var(--header-sub); }
 
+.edificio-selector { display: flex; align-items: center; gap: 6px; color: var(--text-muted); }
+
 /* ── Nav tabs ── */
 .header-nav { display: flex; gap: 4px; }
 

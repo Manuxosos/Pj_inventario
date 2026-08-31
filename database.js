@@ -135,6 +135,52 @@ async function initSchema() {
     )
   `);
 
+  // ── Multi-edificio (Fase 2) ──────────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS edificios (
+      id         SERIAL PRIMARY KEY,
+      nombre     TEXT NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`ALTER TABLE equipos ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
+  await pool.query(`ALTER TABLE tareas ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
+  await pool.query(`ALTER TABLE historial_equipos ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
+  await pool.query(`ALTER TABLE asientos_agentes ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
+
+  // El nombre de un agente puede repetirse entre distintos edificios: el
+  // identificador único pasa de ser solo agente_key a (agente_key, edificio_id).
+  await pool.query(`
+    DO $$ BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'asientos_agentes_agente_key_key'
+      ) THEN
+        ALTER TABLE asientos_agentes DROP CONSTRAINT asientos_agentes_agente_key_key;
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'asientos_agentes_key_edificio_unique'
+      ) THEN
+        ALTER TABLE asientos_agentes ADD CONSTRAINT asientos_agentes_key_edificio_unique UNIQUE (agente_key, edificio_id);
+      END IF;
+    END $$
+  `);
+
+  // Sembrar el edificio original y asignar a él todo lo que ya existía sin
+  // edificio_id (migración desde la Fase 1, de un solo edificio). Los
+  // usuarios NO se tocan acá: admin y observador global deben quedar con
+  // edificio_id NULL (alcance global); las cuentas IT nuevas se crean ya con
+  // su edificio asignado explícitamente desde /api/usuarios.
+  const { rows: japonRows } = await pool.query(
+    "INSERT INTO edificios (nombre) VALUES ('Japón') ON CONFLICT (nombre) DO UPDATE SET nombre = EXCLUDED.nombre RETURNING id"
+  );
+  const japonId = japonRows[0].id;
+  await pool.query('UPDATE equipos SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
+  await pool.query('UPDATE tareas SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
+  await pool.query('UPDATE historial_equipos SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
+  await pool.query('UPDATE asientos_agentes SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {

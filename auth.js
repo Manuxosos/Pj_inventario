@@ -18,7 +18,7 @@ async function login(usuario, password) {
   if (!user) return null;
   if (!bcrypt.compareSync(password, user.password_hash)) return null;
   return jwt.sign(
-    { id: user.id, usuario: user.usuario, rol: user.rol, nombre: user.nombre },
+    { id: user.id, usuario: user.usuario, rol: user.rol, nombre: user.nombre, edificio_id: user.edificio_id },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES }
   );
