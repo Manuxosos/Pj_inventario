@@ -60,16 +60,12 @@
 }
 
 .login-brand h1 {
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 700;
+  letter-spacing: 0.2px;
   color: var(--neon-cyan);
   text-shadow: 0 0 16px rgba(0,245,255,0.5);
-  margin: 0 0 4px;
-}
-
-.login-brand p {
-  font-size: 13px;
-  color: var(--text-muted);
+  margin: 0;
 }
 
 .login-form {

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Monitor, LogIn, Eye, EyeOff } from 'lucide-react';
+import { Package, LogIn, Eye, EyeOff } from 'lucide-react';
 import { loginApi } from '../api';
 import './Login.css';
 
@@ -30,10 +30,9 @@ export default function Login({ onLogin }) {
       <div className="login-card">
         <div className="login-brand">
           <div className="login-icon-wrap">
-            <Monitor size={32} color="#06b6d4" />
+            <Package size={32} color="#06b6d4" />
           </div>
           <h1>Inventario IT</h1>
-          <p>Edificio Principal</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
