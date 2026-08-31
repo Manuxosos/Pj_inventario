@@ -68,7 +68,7 @@ function normRam(raw) {
   return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
-export default function Dashboard({ onNavigate, onOpenEquipo }) {
+export default function Dashboard({ onNavigate, onOpenEquipo, refresh }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [actividad, setActividad] = useState([]);
@@ -77,7 +77,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo }) {
   useEffect(() => {
     getEquipos().then(d => { setTodos(d); setLoading(false); });
     getHistorial(15).then(setActividad).catch(() => {});
-  }, []);
+  }, [refresh]);
 
   const agentesPiso = useMemo(() => {
     if (!pisoSeleccionado) return [];

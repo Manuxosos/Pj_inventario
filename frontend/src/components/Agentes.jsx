@@ -41,7 +41,7 @@ function Asiento({ nombre, estado, draggable, dragging, onDragStart, onDragEnd, 
   );
 }
 
-export default function Agentes({ rol, onOpenEquipo, onEditEquipo }) {
+export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
   const puedeMover = rol === 'admin' || rol === 'it';
   const [tablero, setTablero] = useState({});
   const [pisos, setPisos] = useState([]);
@@ -59,7 +59,7 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo }) {
     });
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [refresh]);
 
   const handleDragStart = (e, agente, pisoOrigen, mesaOrigen) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ agente, pisoOrigen, mesaOrigen }));

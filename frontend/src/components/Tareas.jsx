@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { getTareas, createTarea, updateTarea, deleteTarea, getUsuariosAsign } from '../api';
+import { getTareas, createTarea, updateTarea, deleteTarea, getUsuariosAsign, getEdificioActivo } from '../api';
 import { PlusCircle, Pencil, Trash2, CheckCircle2, Clock, XCircle, PlayCircle, AlertTriangle } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import './Tareas.css';
@@ -25,7 +25,7 @@ function estaAtrasada(t) {
   return new Date(t.fecha_limite) < hoy;
 }
 
-export default function Tareas({ rol, miId }) {
+export default function Tareas({ rol, miId, refresh }) {
   const [tareas,    setTareas]    = useState([]);
   const [usuarios,  setUsuarios]  = useState([]);
   const [modal,     setModal]     = useState(null);
@@ -36,6 +36,7 @@ export default function Tareas({ rol, miId }) {
 
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin     = rol === 'admin';
+  const puedeCrear  = puedeEditar && (rol === 'it' || getEdificioActivo() != null);
 
   const cargar = () => {
     setLoading(true);
@@ -46,7 +47,7 @@ export default function Tareas({ rol, miId }) {
     });
   };
 
-  useEffect(() => { cargar(); }, []);
+  useEffect(() => { cargar(); }, [refresh]);
 
   const handleDelete = async (t) => {
     if (!confirm(`¿Eliminar la tarea "${t.titulo}"?`)) return;
@@ -88,7 +89,7 @@ export default function Tareas({ rol, miId }) {
             onChange={e => setFiltro(e.target.value)}
             style={{ width: 200 }}
           />
-          {puedeEditar && (
+          {puedeCrear && (
             <button className="btn btn-primary" onClick={() => setModal({ mode: 'create', data: { ...emptyForm } })}>
               <PlusCircle size={14} /> Nueva tarea
             </button>

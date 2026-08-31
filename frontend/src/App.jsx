@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2 } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
@@ -8,7 +8,7 @@ import Tareas from './components/Tareas';
 import Agentes from './components/Agentes';
 import GlobalSearch from './components/GlobalSearch';
 import Login from './components/Login';
-import { getEquipo } from './api';
+import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
 import './App.css';
 
@@ -35,6 +35,12 @@ export default function App() {
   const rol      = userInfo?.rol || 'observador';
   const puedeEditar  = rol === 'admin' || rol === 'it';
   const esAdmin      = rol === 'admin';
+  // Alcance global (Fase 2): cuentas sin edificio_id fijo ven todos los
+  // edificios y pueden elegir cuál mirar. Admin siempre es global; un
+  // observador puede ser global (Santiago) o limitado a un solo edificio.
+  const esGlobal     = !!userInfo && userInfo.edificio_id == null;
+  const [edificios, setEdificios]   = useState([]);
+  const [edificioSel, setEdificioSel] = useState(null); // null = "Todos los edificios"
 
   const handleDashboardNav = (filter) => {
     setDashboardFilter(filter);
@@ -75,7 +81,19 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKey);
   }, [autenticado]);
 
+  useEffect(() => {
+    if (!esGlobal) return;
+    getEdificios().then(setEdificios).catch(() => {});
+  }, [esGlobal]);
+
   if (!autenticado) return <Login onLogin={() => setAutenticado(true)} />;
+
+  const handleEdificioChange = (valor) => {
+    const id = valor === '' ? null : parseInt(valor);
+    setEdificioSel(id);
+    setEdificioActivo(id);
+    setRefresh(r => r + 1);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -99,6 +117,23 @@ export default function App() {
             <Monitor size={26} color="#60a5fa" />
             <h1>Inventario IT</h1>
           </div>
+
+          {esGlobal && (
+            <div className="edificio-selector" title="Edificio">
+              <Building2 size={15} />
+              <select
+                className="form-input"
+                value={edificioSel ?? ''}
+                onChange={e => handleEdificioChange(e.target.value)}
+                style={{ width: 'auto', padding: '4px 8px' }}
+              >
+                <option value="">Todos los edificios</option>
+                {edificios.map(ed => (
+                  <option key={ed.id} value={ed.id}>{ed.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <nav className="header-nav">
             <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
@@ -132,7 +167,7 @@ export default function App() {
                 </div>
               </div>
             )}
-            {tab === 'inventario' && puedeEditar && (
+            {tab === 'inventario' && puedeEditar && (!esGlobal || edificioSel != null) && (
               <button className="btn btn-primary" onClick={() => setModal({ mode: 'create' })}>
                 <PlusCircle size={14} /> Nuevo Equipo
               </button>
@@ -147,7 +182,7 @@ export default function App() {
 
       <main className="app-main">
         <div key={tab} className="tab-fade">
-          {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} />}
+          {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} refresh={refresh} />}
           {tab === 'inventario' && (
             <EquiposList
               refresh={refresh}
@@ -158,15 +193,16 @@ export default function App() {
               showToast={showToast}
             />
           )}
-          {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} />}
+          {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />}
           {tab === 'agentes'  && (
             <Agentes
               rol={rol}
               onOpenEquipo={handleOpenEquipo}
               onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+              refresh={refresh}
             />
           )}
-          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} />}
+          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} refresh={refresh} />}
         </div>
       </main>
 

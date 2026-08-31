@@ -26,6 +26,18 @@ function requireRol(...roles) {
   };
 }
 
+// ── Alcance por edificio (Fase 2) ─────────────────────────────────────────────
+// Punto único de decisión de a qué edificio limitar cada consulta. Un usuario
+// con edificio_id fijo (IT, o un observador limitado a un edificio) siempre
+// queda filtrado a ese edificio, sin excepción — el parámetro ?edificio= se
+// ignora en ese caso. Un usuario con edificio_id = NULL (admin, observador
+// global) ve todos por defecto, o uno específico si lo pide con ?edificio=ID.
+function scopeEdificio(req) {
+  if (req.user.edificio_id != null) return req.user.edificio_id;
+  const q = parseInt(req.query.edificio);
+  return Number.isInteger(q) ? q : null;
+}
+
 // ── Helper parámetros pg ──────────────────────────────────────────────────────
 function mkParams() {
   const params = [];
@@ -59,11 +71,12 @@ app.use('/api', verificarToken);
 // Construye el WHERE + params de equipos a partir de los filtros de la
 // query string. Se comparte entre GET /api/equipos y GET /api/exportar
 // para que "exportar" respete exactamente los mismos filtros aplicados.
-function buildEquiposQuery(query) {
+function buildEquiposQuery(query, edificioId) {
   const { piso, estado, estadoIn, search, ram, modelo, accesorio, responsable } = query;
   const { params, add } = mkParams();
   let q = 'SELECT * FROM equipos WHERE eliminado_en IS NULL';
 
+  if (edificioId != null) q += ` AND edificio_id = ${add(edificioId)}`;
   if (piso)   q += ` AND piso = ${add(piso)}`;
   if (estado) q += ` AND estado = ${add(estado)}`;
   if (responsable) q += ` AND UPPER(TRIM(responsable)) = ${add(responsable.trim().toUpperCase())}`;
@@ -87,7 +100,7 @@ function buildEquiposQuery(query) {
 // GET /api/equipos
 app.get('/api/equipos', async (req, res) => {
   try {
-    const { q, params } = buildEquiposQuery(req.query);
+    const { q, params } = buildEquiposQuery(req.query, scopeEdificio(req));
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
@@ -100,9 +113,12 @@ app.get('/api/equipos', async (req, res) => {
 // interprete "papelera" como un id
 app.get('/api/equipos/papelera', requireRol('admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      "SELECT * FROM equipos WHERE eliminado_en IS NOT NULL ORDER BY eliminado_en DESC"
-    );
+    const scope = scopeEdificio(req);
+    const { params, add } = mkParams();
+    let q = 'SELECT * FROM equipos WHERE eliminado_en IS NOT NULL';
+    if (scope != null) q += ` AND edificio_id = ${add(scope)}`;
+    q += ' ORDER BY eliminado_en DESC';
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -113,8 +129,12 @@ app.get('/api/equipos/papelera', requireRol('admin'), async (req, res) => {
 app.get('/api/equipos/:id', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
-    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
-    res.json(rows[0]);
+    const equipo = rows[0];
+    const scope = scopeEdificio(req);
+    if (!equipo || (scope != null && equipo.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
+    }
+    res.json(equipo);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -123,21 +143,25 @@ app.get('/api/equipos/:id', async (req, res) => {
 // POST /api/equipos — solo admin e IT
 app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
   try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
     const vals = EQUIPO_FIELDS.map(f => {
       const v = req.body[f] ?? '';
       return (f === 'numero_serie' && v === '') ? null : v;
     });
     const placeholders = vals.map((_, i) => `$${i + 1}`).join(',');
     const { rows } = await pool.query(
-      `INSERT INTO equipos (${EQUIPO_FIELDS.join(',')}) VALUES (${placeholders}) RETURNING id`,
-      vals
+      `INSERT INTO equipos (${EQUIPO_FIELDS.join(',')}, edificio_id) VALUES (${placeholders}, $${vals.length + 1}) RETURNING id`,
+      [...vals, edificioId]
     );
     const newId = rows[0].id;
     const label = req.body.id_activo || req.body.numero_serie || String(newId);
     await pool.query(
-      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
-       VALUES ($1,$2,$3,$4,'creacion','','Equipo registrado')`,
-      [newId, label, req.user.id, req.user.nombre || req.user.usuario]
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, edificio_id)
+       VALUES ($1,$2,$3,$4,'creacion','','Equipo registrado',$5)`,
+      [newId, label, req.user.id, req.user.nombre || req.user.usuario, edificioId]
     );
     res.status(201).json({ id: newId });
   } catch (err) {
@@ -149,7 +173,10 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
 app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
     const { rows: [old] } = await pool.query('SELECT * FROM equipos WHERE id = $1 AND eliminado_en IS NULL', [req.params.id]);
-    if (!old) return res.status(404).json({ error: 'No encontrado' });
+    const scope = scopeEdificio(req);
+    if (!old || (scope != null && old.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
+    }
 
     const vals = EQUIPO_FIELDS.map(f => {
       const v = req.body[f] ?? '';
@@ -167,9 +194,9 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
       const nuevo = String(vals[i] ?? '');
       if (ant !== nuevo) {
         await pool.query(
-          `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
-           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-          [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario, campo, ant, nuevo]
+          `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, edificio_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario, campo, ant, nuevo, old.edificio_id]
         );
       }
     }
@@ -183,13 +210,16 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
 app.delete('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
     const { rows: [eq] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
-    if (!eq) return res.status(404).json({ error: 'No encontrado' });
+    const scope = scopeEdificio(req);
+    if (!eq || (scope != null && eq.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
+    }
     await pool.query('UPDATE equipos SET eliminado_en = NOW() WHERE id = $1', [req.params.id]);
     const label = eq.id_activo || eq.numero_serie || String(eq.id);
     await pool.query(
-      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
-       VALUES ($1,$2,$3,$4,'eliminacion','','Movido a la papelera')`,
-      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario]
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, edificio_id)
+       VALUES ($1,$2,$3,$4,'eliminacion','','Movido a la papelera',$5)`,
+      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario, eq.edificio_id]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -201,13 +231,16 @@ app.delete('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
 app.put('/api/equipos/:id/restaurar', requireRol('admin'), async (req, res) => {
   try {
     const { rows: [eq] } = await pool.query('SELECT * FROM equipos WHERE id = $1', [req.params.id]);
-    if (!eq) return res.status(404).json({ error: 'No encontrado' });
+    const scope = scopeEdificio(req);
+    if (!eq || (scope != null && eq.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
+    }
     await pool.query('UPDATE equipos SET eliminado_en = NULL WHERE id = $1', [req.params.id]);
     const label = eq.id_activo || eq.numero_serie || String(eq.id);
     await pool.query(
-      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
-       VALUES ($1,$2,$3,$4,'restauracion','','Restaurado desde la papelera')`,
-      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario]
+      `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, edificio_id)
+       VALUES ($1,$2,$3,$4,'restauracion','','Restaurado desde la papelera',$5)`,
+      [req.params.id, label, req.user.id, req.user.nombre || req.user.usuario, eq.edificio_id]
     );
     res.json({ ok: true });
   } catch (err) {
@@ -218,10 +251,12 @@ app.put('/api/equipos/:id/restaurar', requireRol('admin'), async (req, res) => {
 // DELETE /api/equipos/:id/definitivo — borrado permanente, solo admin, solo desde la papelera
 app.delete('/api/equipos/:id/definitivo', requireRol('admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      'DELETE FROM equipos WHERE id = $1 AND eliminado_en IS NOT NULL RETURNING id',
-      [req.params.id]
-    );
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM equipos WHERE id = $1 AND eliminado_en IS NOT NULL';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
     if (!rows[0]) return res.status(404).json({ error: 'El equipo no está en la papelera' });
     res.json({ ok: true });
   } catch (err) {
@@ -232,9 +267,12 @@ app.delete('/api/equipos/:id/definitivo', requireRol('admin'), async (req, res) 
 // GET /api/opciones
 app.get('/api/opciones', async (req, res) => {
   try {
+    const scope = scopeEdificio(req);
+    const params = scope != null ? [scope] : [];
+    const cond = scope != null ? 'AND edificio_id = $1' : '';
     const [p, e] = await Promise.all([
-      pool.query("SELECT DISTINCT piso FROM equipos WHERE piso != '' ORDER BY piso"),
-      pool.query("SELECT DISTINCT estado FROM equipos WHERE estado != '' ORDER BY estado"),
+      pool.query(`SELECT DISTINCT piso FROM equipos WHERE piso != '' ${cond} ORDER BY piso`, params),
+      pool.query(`SELECT DISTINCT estado FROM equipos WHERE estado != '' ${cond} ORDER BY estado`, params),
     ]);
     res.json({ pisos: p.rows.map(r => r.piso), estados: e.rows.map(r => r.estado) });
   } catch (err) {
@@ -245,7 +283,7 @@ app.get('/api/opciones', async (req, res) => {
 // GET /api/exportar — admin e IT
 app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
   try {
-    const { q, params } = buildEquiposQuery(req.query);
+    const { q, params } = buildEquiposQuery(req.query, scopeEdificio(req));
     const { rows: equipos } = await pool.query(q, params);
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Equipos');
@@ -314,12 +352,18 @@ app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
 app.get('/api/historial', async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit) || 100, 200);
+    const scope = scopeEdificio(req);
+    const params = [];
+    let cond = '';
+    if (scope != null) { params.push(scope); cond = `WHERE h.edificio_id = $${params.length}`; }
+    params.push(limit);
     const { rows } = await pool.query(
       `SELECT h.*, e.piso AS equipo_piso, e.marca_modelo AS equipo_modelo, e.numero_serie AS equipo_serie
        FROM historial_equipos h
        LEFT JOIN equipos e ON e.id = h.equipo_id
-       ORDER BY h.created_at DESC LIMIT $1`,
-      [limit]
+       ${cond}
+       ORDER BY h.created_at DESC LIMIT $${params.length}`,
+      params
     );
     res.json(rows);
   } catch (err) {
@@ -329,10 +373,12 @@ app.get('/api/historial', async (req, res) => {
 
 app.get('/api/historial/equipo/:id', async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      'SELECT * FROM historial_equipos WHERE equipo_id = $1 ORDER BY created_at DESC',
-      [req.params.id]
-    );
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'SELECT * FROM historial_equipos WHERE equipo_id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' ORDER BY created_at DESC';
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -341,7 +387,13 @@ app.get('/api/historial/equipo/:id', async (req, res) => {
 
 app.put('/api/historial/:id/nota', requireRol('admin', 'it'), async (req, res) => {
   try {
-    await pool.query('UPDATE historial_equipos SET nota = $1 WHERE id = $2', [req.body.nota || '', req.params.id]);
+    const scope = scopeEdificio(req);
+    const params = [req.body.nota || '', req.params.id];
+    let q = 'UPDATE historial_equipos SET nota = $1 WHERE id = $2';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -351,7 +403,12 @@ app.put('/api/historial/:id/nota', requireRol('admin', 'it'), async (req, res) =
 // ── Tareas IT ─────────────────────────────────────────────────────────────────
 app.get('/api/tareas', async (req, res) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM tareas ORDER BY created_at DESC');
+    const scope = scopeEdificio(req);
+    const params = [];
+    let q = 'SELECT * FROM tareas';
+    if (scope != null) { params.push(scope); q += ` WHERE edificio_id = $${params.length}`; }
+    q += ' ORDER BY created_at DESC';
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -360,14 +417,18 @@ app.get('/api/tareas', async (req, res) => {
 
 app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
   try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
     const { titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre } = req.body;
     if (!titulo) return res.status(400).json({ error: 'El título es obligatorio' });
     const { rows } = await pool.query(
-      `INSERT INTO tareas (titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre, creado_id, creado_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+      `INSERT INTO tareas (titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre, creado_id, creado_nombre, edificio_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
       [titulo, descripcion || '', estado || 'Pendiente', piso || '', fecha_limite || null,
        asignado_id || null, asignado_nombre || '',
-       req.user.id, req.user.nombre || req.user.usuario]
+       req.user.id, req.user.nombre || req.user.usuario, edificioId]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -377,12 +438,14 @@ app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
 
 app.put('/api/tareas/:id', requireRol('admin', 'it'), async (req, res) => {
   try {
+    const scope = scopeEdificio(req);
     const { titulo, descripcion, estado, piso, fecha_limite, asignado_id, asignado_nombre } = req.body;
-    await pool.query(
-      `UPDATE tareas SET titulo=$1, descripcion=$2, estado=$3, piso=$4, fecha_limite=$5, asignado_id=$6, asignado_nombre=$7
-       WHERE id=$8`,
-      [titulo, descripcion || '', estado, piso || '', fecha_limite || null, asignado_id || null, asignado_nombre || '', req.params.id]
-    );
+    const params = [titulo, descripcion || '', estado, piso || '', fecha_limite || null, asignado_id || null, asignado_nombre || '', req.params.id];
+    let q = `UPDATE tareas SET titulo=$1, descripcion=$2, estado=$3, piso=$4, fecha_limite=$5, asignado_id=$6, asignado_nombre=$7 WHERE id=$8`;
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -391,7 +454,11 @@ app.put('/api/tareas/:id', requireRol('admin', 'it'), async (req, res) => {
 
 app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
   try {
-    await pool.query('DELETE FROM tareas WHERE id = $1', [req.params.id]);
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM tareas WHERE id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    await pool.query(q, params);
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -401,9 +468,12 @@ app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
 // ── Usuarios asignables (para dropdown de tareas) ─────────────────────────────
 app.get('/api/usuarios/asignables', async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      "SELECT id, nombre, usuario, rol FROM usuarios WHERE activo = true AND rol IN ('admin','it') ORDER BY nombre"
-    );
+    const scope = scopeEdificio(req);
+    const params = [];
+    let q = "SELECT id, nombre, usuario, rol FROM usuarios WHERE activo = true AND rol IN ('admin','it')";
+    if (scope != null) { params.push(scope); q += ` AND (edificio_id = $${params.length} OR edificio_id IS NULL)`; }
+    q += ' ORDER BY nombre';
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -413,11 +483,16 @@ app.get('/api/usuarios/asignables', async (req, res) => {
 // ── Tablero de agentes por piso/mesa ──────────────────────────────────────────
 // El piso de cada agente se deriva en vivo del piso de sus equipos (el más
 // frecuente si tiene varios), para que quede siempre sincronizado con
-// Inventario. Solo la mesa (1 o 2) dentro de ese piso se persiste.
+// Inventario. Solo la mesa (1 o 2) dentro de ese piso se persiste. Requiere
+// un edificio específico — no tiene sentido agregar asientos entre edificios.
 app.get('/api/agentes/tablero', async (req, res) => {
   try {
+    const scope = scopeEdificio(req);
+    if (scope == null) return res.json({ pisos: [], tablero: {} });
+
     const { rows: equipos } = await pool.query(
-      "SELECT piso, responsable, estado FROM equipos WHERE responsable IS NOT NULL AND responsable != '' AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'"
+      "SELECT piso, responsable, estado FROM equipos WHERE responsable IS NOT NULL AND responsable != '' AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA' AND edificio_id = $1",
+      [scope]
     );
 
     const porAgente = new Map();
@@ -449,7 +524,7 @@ app.get('/api/agentes/tablero', async (req, res) => {
       derivados.set(key, { nombre: info.nombre, piso: mejorPiso, estado: estadoPrincipal(info.estados) });
     }
 
-    const { rows: asientosRows } = await pool.query('SELECT * FROM asientos_agentes');
+    const { rows: asientosRows } = await pool.query('SELECT * FROM asientos_agentes WHERE edificio_id = $1', [scope]);
     const asientosMap = new Map(asientosRows.map(a => [a.agente_key, a]));
 
     // ocupación actual por piso+mesa (solo contando agentes que siguen vigentes)
@@ -468,8 +543,8 @@ app.get('/api/agentes/tablero', async (req, res) => {
       const mesa = enMesa1 < 7 ? 1 : 2;
       ocupacion.set(`${info.piso}|${mesa}`, (ocupacion.get(`${info.piso}|${mesa}`) || 0) + 1);
       await pool.query(
-        'INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa) VALUES ($1,$2,$3) ON CONFLICT (agente_key) DO NOTHING',
-        [info.nombre, key, mesa]
+        'INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa, edificio_id) VALUES ($1,$2,$3,$4) ON CONFLICT (agente_key, edificio_id) DO NOTHING',
+        [info.nombre, key, mesa, scope]
       );
       asientosMap.set(key, { agente_key: key, agente_nombre: info.nombre, mesa });
     }
@@ -494,6 +569,9 @@ app.get('/api/agentes/tablero', async (req, res) => {
 // PUT /api/agentes/mover — mueve un agente a otro piso/mesa (admin e IT)
 app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
   try {
+    const scope = scopeEdificio(req);
+    if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
+
     const { agente, piso, mesa } = req.body;
     if (!agente || !piso || !(mesa === 1 || mesa === 2)) {
       return res.status(400).json({ error: 'Faltan datos (agente, piso, mesa)' });
@@ -502,8 +580,8 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
     const key = agenteTrim.toUpperCase();
 
     const { rows: equiposAgente } = await pool.query(
-      'SELECT id, id_activo, numero_serie, piso FROM equipos WHERE UPPER(TRIM(responsable)) = $1',
-      [key]
+      'SELECT id, id_activo, numero_serie, piso FROM equipos WHERE UPPER(TRIM(responsable)) = $1 AND edificio_id = $2',
+      [key, scope]
     );
     if (equiposAgente.length === 0) {
       return res.status(404).json({ error: 'No se encontró ningún equipo con ese responsable' });
@@ -514,17 +592,17 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
       await pool.query('UPDATE equipos SET piso = $1 WHERE id = $2', [piso, eq.id]);
       const label = eq.id_activo || eq.numero_serie || String(eq.id);
       await pool.query(
-        `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo)
-         VALUES ($1,$2,$3,$4,'piso',$5,$6)`,
-        [eq.id, label, req.user.id, req.user.nombre || req.user.usuario, eq.piso, piso]
+        `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, edificio_id)
+         VALUES ($1,$2,$3,$4,'piso',$5,$6,$7)`,
+        [eq.id, label, req.user.id, req.user.nombre || req.user.usuario, eq.piso, piso, scope]
       );
     }
 
     await pool.query(
-      `INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa)
-       VALUES ($1,$2,$3)
-       ON CONFLICT (agente_key) DO UPDATE SET mesa = $3, updated_at = NOW()`,
-      [agenteTrim, key, mesa]
+      `INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa, edificio_id)
+       VALUES ($1,$2,$3,$4)
+       ON CONFLICT (agente_key, edificio_id) DO UPDATE SET mesa = $3, updated_at = NOW()`,
+      [agenteTrim, key, mesa, scope]
     );
 
     res.json({ ok: true });
@@ -533,12 +611,45 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
   }
 });
 
+// ── Edificios (Fase 2) ────────────────────────────────────────────────────────
+// Solo visible para cuentas de alcance global (admin, y el observador global).
+// Un observador limitado a un edificio no necesita ni debe ver esta lista.
+app.get('/api/edificios', requireRol('admin', 'observador'), async (req, res) => {
+  try {
+    if (req.user.edificio_id != null) {
+      return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+    }
+    const { rows } = await pool.query('SELECT id, nombre FROM edificios ORDER BY nombre');
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/edificios', requireRol('admin'), async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre || !nombre.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
+    const { rows } = await pool.query(
+      'INSERT INTO edificios (nombre) VALUES ($1) RETURNING id, nombre',
+      [nombre.trim()]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un edificio con ese nombre' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ── Gestión de usuarios (solo admin) ─────────────────────────────────────────
 app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      'SELECT id, nombre, usuario, rol, activo, created_at FROM usuarios ORDER BY created_at'
-    );
+    const scope = scopeEdificio(req);
+    const params = [];
+    let q = 'SELECT id, nombre, usuario, rol, activo, edificio_id, created_at FROM usuarios';
+    if (scope != null) { params.push(scope); q += ` WHERE edificio_id = $${params.length}`; }
+    q += ' ORDER BY created_at';
+    const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -547,14 +658,18 @@ app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
 
 app.post('/api/usuarios', requireRol('admin'), async (req, res) => {
   try {
-    const { nombre, usuario, password, rol } = req.body;
+    const { nombre, usuario, password, rol, edificio_id } = req.body;
     if (!nombre || !usuario || !password || !rol) {
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
+    if (rol === 'it' && !edificio_id) {
+      return res.status(400).json({ error: 'Las cuentas IT deben tener un edificio asignado' });
+    }
+    const edificioIdFinal = rol === 'admin' ? null : (edificio_id || null);
     const hash = bcrypt.hashSync(password, 10);
     const { rows } = await pool.query(
-      'INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES ($1,$2,$3,$4) RETURNING id',
-      [nombre, usuario, hash, rol]
+      'INSERT INTO usuarios (nombre, usuario, password_hash, rol, edificio_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      [nombre, usuario, hash, rol, edificioIdFinal]
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
@@ -565,17 +680,21 @@ app.post('/api/usuarios', requireRol('admin'), async (req, res) => {
 
 app.put('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
   try {
-    const { nombre, usuario, password, rol, activo } = req.body;
+    const { nombre, usuario, password, rol, activo, edificio_id } = req.body;
+    if (rol === 'it' && !edificio_id) {
+      return res.status(400).json({ error: 'Las cuentas IT deben tener un edificio asignado' });
+    }
+    const edificioIdFinal = rol === 'admin' ? null : (edificio_id || null);
     if (password) {
       const hash = bcrypt.hashSync(password, 10);
       await pool.query(
-        'UPDATE usuarios SET nombre=$1, usuario=$2, password_hash=$3, rol=$4, activo=$5 WHERE id=$6',
-        [nombre, usuario, hash, rol, activo, req.params.id]
+        'UPDATE usuarios SET nombre=$1, usuario=$2, password_hash=$3, rol=$4, activo=$5, edificio_id=$6 WHERE id=$7',
+        [nombre, usuario, hash, rol, activo, edificioIdFinal, req.params.id]
       );
     } else {
       await pool.query(
-        'UPDATE usuarios SET nombre=$1, usuario=$2, rol=$3, activo=$4 WHERE id=$5',
-        [nombre, usuario, rol, activo, req.params.id]
+        'UPDATE usuarios SET nombre=$1, usuario=$2, rol=$3, activo=$4, edificio_id=$5 WHERE id=$6',
+        [nombre, usuario, rol, activo, edificioIdFinal, req.params.id]
       );
     }
     res.json({ ok: true });
