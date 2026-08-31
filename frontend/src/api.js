@@ -70,6 +70,7 @@ export const deleteTarea = (id)       => api.delete(`/tareas/${id}`).then(r => r
 // Tablero de agentes por piso/mesa
 export const getAgentesTablero = ()               => api.get('/agentes/tablero').then(r => r.data);
 export const moverAgente       = (agente, piso, mesa) => api.put('/agentes/mover', { agente, piso, mesa }).then(r => r.data);
+export const setCapacidadMesa  = (capacidad)       => api.put('/edificios/capacidad-mesa', { capacidad }).then(r => r.data);
 
 // Edificios (Fase 2) — solo cuentas de alcance global (admin, observador global)
 export const getEdificios   = ()     => api.get('/edificios').then(r => r.data);

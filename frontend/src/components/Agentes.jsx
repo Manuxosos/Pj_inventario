@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAgentesTablero, moverAgente } from '../api';
+import { getAgentesTablero, moverAgente, setCapacidadMesa } from '../api';
 import AgenteInfoModal from './AgenteInfoModal';
 import { colorAgente } from '../agenteColor';
 import './Agentes.css';
@@ -50,16 +50,33 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
   const [dragging, setDragging] = useState(null); // nombre del agente en vuelo
   const [moviendo, setMoviendo] = useState(false);
   const [agenteSel, setAgenteSel] = useState(null); // { nombre, piso, mesa }
+  const [capacidad, setCapacidad] = useState(7);
+  const [capacidadInput, setCapacidadInput] = useState('7');
+  const [guardandoCapacidad, setGuardandoCapacidad] = useState(false);
 
   const cargar = () => {
     getAgentesTablero().then(d => {
       setTablero(d.tablero || {});
       setPisos(d.pisos || []);
+      setCapacidad(d.capacidadMesa || 7);
+      setCapacidadInput(String(d.capacidadMesa || 7));
       setLoading(false);
     });
   };
 
   useEffect(() => { cargar(); }, [refresh]);
+
+  const handleGuardarCapacidad = async () => {
+    const n = parseInt(capacidadInput);
+    if (!Number.isInteger(n) || n < 1 || n > 50) return;
+    setGuardandoCapacidad(true);
+    try {
+      await setCapacidadMesa(n);
+      cargar();
+    } finally {
+      setGuardandoCapacidad(false);
+    }
+  };
 
   const handleDragStart = (e, agente, pisoOrigen, mesaOrigen) => {
     e.dataTransfer.setData('application/json', JSON.stringify({ agente, pisoOrigen, mesaOrigen }));
@@ -111,17 +128,46 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
               : 'Hacé click en un agente para ver su información.'}
           </p>
         </div>
+        {puedeMover && (
+          <div className="agentes-capacidad">
+            <label className="agentes-capacidad-label">Agentes por mesa</label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              className="agentes-capacidad-input"
+              value={capacidadInput}
+              onChange={e => setCapacidadInput(e.target.value)}
+            />
+            <button
+              className="btn btn-secondary agentes-capacidad-btn"
+              onClick={handleGuardarCapacidad}
+              disabled={guardandoCapacidad || parseInt(capacidadInput) === capacidad}
+            >
+              {guardandoCapacidad ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        )}
       </div>
 
       {pisos.length === 0 ? (
         <div className="table-empty">No hay agentes con equipos asignados a ningún piso todavía.</div>
       ) : (
         <div className="agentes-pisos">
-          {pisos.map(piso => (
+          {pisos.map(piso => {
+            const mesasUsadas = Object.keys(tablero[piso] || {}).map(Number);
+            const maxMesa = mesasUsadas.length ? Math.max(...mesasUsadas) : 1;
+            // se muestra una mesa vacía extra al final para poder arrastrar un
+            // agente ahí y que el sistema genere esa mesa automáticamente
+            const mesasARenderizar = Array.from(
+              { length: maxMesa + (puedeMover ? 1 : 0) },
+              (_, i) => i + 1
+            );
+            return (
             <div key={piso} className="agentes-piso-card card">
               <h3 className="agentes-piso-title">{piso}</h3>
               <div className="agentes-mesas">
-                {[1, 2].map(mesa => {
+                {mesasARenderizar.map(mesa => {
                   const key = `${piso}|${mesa}`;
                   const agentes = tablero[piso]?.[mesa] || [];
                   const { arriba, abajo } = splitFilas(agentes);
@@ -165,7 +211,8 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
                 })}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

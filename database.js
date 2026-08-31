@@ -150,6 +150,11 @@ async function initSchema() {
   await pool.query(`ALTER TABLE historial_equipos ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
   await pool.query(`ALTER TABLE asientos_agentes ADD COLUMN IF NOT EXISTS edificio_id INTEGER REFERENCES edificios(id)`);
 
+  // Cuántos agentes entran por mesa antes de que el tablero de Agentes genere
+  // una mesa nueva automáticamente. Configurable por edificio (cada uno tiene
+  // su propia distribución física).
+  await pool.query(`ALTER TABLE edificios ADD COLUMN IF NOT EXISTS capacidad_mesa INTEGER NOT NULL DEFAULT 7`);
+
   // El nombre de un agente puede repetirse entre distintos edificios: el
   // identificador único pasa de ser solo agente_key a (agente_key, edificio_id).
   await pool.query(`

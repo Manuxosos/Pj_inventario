@@ -524,6 +524,9 @@ app.get('/api/agentes/tablero', async (req, res) => {
       derivados.set(key, { nombre: info.nombre, piso: mejorPiso, estado: estadoPrincipal(info.estados) });
     }
 
+    const { rows: edifRows } = await pool.query('SELECT capacidad_mesa FROM edificios WHERE id = $1', [scope]);
+    const capacidadMesa = edifRows[0]?.capacidad_mesa || 7;
+
     const { rows: asientosRows } = await pool.query('SELECT * FROM asientos_agentes WHERE edificio_id = $1', [scope]);
     const asientosMap = new Map(asientosRows.map(a => [a.agente_key, a]));
 
@@ -536,11 +539,13 @@ app.get('/api/agentes/tablero', async (req, res) => {
       ocupacion.set(k, (ocupacion.get(k) || 0) + 1);
     }
 
-    // asignar mesa a agentes nuevos sin asiento persistido todavía
+    // asignar mesa a agentes nuevos sin asiento persistido todavía: cae en la
+    // primera mesa con lugar libre, y si todas están al tope de su capacidad
+    // se genera una mesa nueva automáticamente.
     for (const [key, info] of derivados) {
       if (asientosMap.has(key)) continue;
-      const enMesa1 = ocupacion.get(`${info.piso}|1`) || 0;
-      const mesa = enMesa1 < 7 ? 1 : 2;
+      let mesa = 1;
+      while ((ocupacion.get(`${info.piso}|${mesa}`) || 0) >= capacidadMesa) mesa++;
       ocupacion.set(`${info.piso}|${mesa}`, (ocupacion.get(`${info.piso}|${mesa}`) || 0) + 1);
       await pool.query(
         'INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa, edificio_id) VALUES ($1,$2,$3,$4) ON CONFLICT (agente_key, edificio_id) DO NOTHING',
@@ -551,16 +556,18 @@ app.get('/api/agentes/tablero', async (req, res) => {
 
     const tablero = {};
     for (const [key, info] of derivados) {
-      if (!tablero[info.piso]) tablero[info.piso] = { 1: [], 2: [] };
-      const mesa = asientosMap.get(key)?.mesa === 2 ? 2 : 1;
+      if (!tablero[info.piso]) tablero[info.piso] = {};
+      const mesa = asientosMap.get(key)?.mesa || 1;
+      if (!tablero[info.piso][mesa]) tablero[info.piso][mesa] = [];
       tablero[info.piso][mesa].push({ nombre: info.nombre, estado: info.estado });
     }
     for (const piso of Object.keys(tablero)) {
-      tablero[piso][1].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
-      tablero[piso][2].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      for (const mesa of Object.keys(tablero[piso])) {
+        tablero[piso][mesa].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+      }
     }
 
-    res.json({ pisos: Object.keys(tablero).sort(), tablero });
+    res.json({ pisos: Object.keys(tablero).sort(), tablero, capacidadMesa });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -573,7 +580,7 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
     if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
 
     const { agente, piso, mesa } = req.body;
-    if (!agente || !piso || !(mesa === 1 || mesa === 2)) {
+    if (!agente || !piso || !Number.isInteger(mesa) || mesa < 1) {
       return res.status(400).json({ error: 'Faltan datos (agente, piso, mesa)' });
     }
     const agenteTrim = agente.trim();
@@ -637,6 +644,24 @@ app.post('/api/edificios', requireRol('admin'), async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un edificio con ese nombre' });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT /api/edificios/capacidad-mesa — cuántos agentes entran por mesa antes de
+// que el tablero de Agentes genere una mesa nueva automáticamente. Siempre
+// sobre el edificio del propio scope (admin puede elegir uno con ?edificio=).
+app.put('/api/edificios/capacidad-mesa', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
+    const capacidad = parseInt(req.body.capacidad);
+    if (!Number.isInteger(capacidad) || capacidad < 1 || capacidad > 50) {
+      return res.status(400).json({ error: 'La capacidad debe ser un número entero entre 1 y 50' });
+    }
+    await pool.query('UPDATE edificios SET capacidad_mesa = $1 WHERE id = $2', [capacidad, scope]);
+    res.json({ ok: true, capacidad });
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

@@ -18,6 +18,32 @@
 
 .agentes-sub { font-size: 13px; color: var(--text-muted); }
 
+.agentes-capacidad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.agentes-capacidad-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.agentes-capacidad-input {
+  width: 56px;
+  padding: 6px 8px;
+  font-size: 13px;
+  text-align: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+}
+
+.agentes-capacidad-btn { padding: 6px 12px; font-size: 12.5px; }
+
 .agentes-pisos {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
