@@ -14,7 +14,7 @@ const COLUMNAS = [
   { key: 'disco_duro',   label: 'Disco' },
   { key: 'numero_serie', label: 'Nº Serie' },
   { key: 'estado',       label: 'Estado' },
-  { key: 'responsable',  label: 'Responsable' },
+  { key: 'responsable',  label: 'Agente' },
 ];
 
 const ESTADOS = ['En uso', 'Disponible', 'En revisión', 'De baja'];
