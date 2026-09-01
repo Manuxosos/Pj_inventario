@@ -1,9 +1,11 @@
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const fs      = require('fs');
-const bcrypt  = require('bcryptjs');
-const ExcelJS = require('exceljs');
+const express   = require('express');
+const cors      = require('cors');
+const path      = require('path');
+const fs        = require('fs');
+const bcrypt    = require('bcryptjs');
+const ExcelJS   = require('exceljs');
+const rateLimit = require('express-rate-limit');
+const { ipKeyGenerator } = rateLimit;
 require('dotenv').config();
 
 const { pool, initPromise } = require('./database');
@@ -14,7 +16,7 @@ const app = express();
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',').map(s => s.trim());
 app.use(cors({ origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 // ── Middleware de roles ───────────────────────────────────────────────────────
 function requireRol(...roles) {
@@ -45,6 +47,14 @@ function mkParams() {
   return { params, add };
 }
 
+// Errores 500 (imprevistos): se loguean con detalle en el servidor pero al
+// cliente se le devuelve un mensaje genérico, para no filtrar nombres de
+// tablas/columnas u otros detalles internos de Postgres.
+function error500(res, err) {
+  console.error(err);
+  res.status(500).json({ error: 'Error interno del servidor' });
+}
+
 const ACCESORIO_COLS  = ['cargador','mouse','audifonos','monitor','estuche','adaptador_tplink'];
 const EQUIPO_FIELDS   = [
   'id_activo','cargador','id_ex','team','marca_modelo','procesador',
@@ -54,14 +64,26 @@ const EQUIPO_FIELDS   = [
 ];
 
 // ── Login (público) ───────────────────────────────────────────────────────────
-app.post('/api/login', async (req, res) => {
+// Limita intentos de login por IP para frenar fuerza bruta contra las cuentas
+// de la app. Nginx corre delante como proxy y solo agrega X-Real-IP (no
+// X-Forwarded-For), por eso se usa un keyGenerator propio en vez de req.ip.
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req.headers['x-real-ip'] || req.ip),
+  message: { error: 'Demasiados intentos de inicio de sesión. Probá de nuevo en unos minutos.' },
+});
+
+app.post('/api/login', loginLimiter, async (req, res) => {
   try {
     const { usuario, password } = req.body;
     const token = await login(usuario, password);
     if (!token) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     res.json({ token });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -104,7 +126,7 @@ app.get('/api/equipos', async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -121,7 +143,7 @@ app.get('/api/equipos/papelera', requireRol('admin'), async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -136,7 +158,7 @@ app.get('/api/equipos/:id', async (req, res) => {
     }
     res.json(equipo);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -165,7 +187,7 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
     );
     res.status(201).json({ id: newId });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -202,7 +224,7 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -223,7 +245,7 @@ app.delete('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
     );
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -244,7 +266,7 @@ app.put('/api/equipos/:id/restaurar', requireRol('admin'), async (req, res) => {
     );
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -260,7 +282,7 @@ app.delete('/api/equipos/:id/definitivo', requireRol('admin'), async (req, res) 
     if (!rows[0]) return res.status(404).json({ error: 'El equipo no está en la papelera' });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -276,7 +298,7 @@ app.get('/api/opciones', async (req, res) => {
     ]);
     res.json({ pisos: p.rows.map(r => r.piso), estados: e.rows.map(r => r.estado) });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -344,7 +366,7 @@ app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -367,7 +389,7 @@ app.get('/api/historial', async (req, res) => {
     );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -381,7 +403,7 @@ app.get('/api/historial/equipo/:id', async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -396,7 +418,7 @@ app.put('/api/historial/:id/nota', requireRol('admin', 'it'), async (req, res) =
     if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -411,7 +433,7 @@ app.get('/api/tareas', async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -432,7 +454,7 @@ app.post('/api/tareas', requireRol('admin', 'it'), async (req, res) => {
     );
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -448,7 +470,7 @@ app.put('/api/tareas/:id', requireRol('admin', 'it'), async (req, res) => {
     if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -461,7 +483,7 @@ app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
     await pool.query(q, params);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -476,7 +498,7 @@ app.get('/api/usuarios/asignables', async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -569,7 +591,7 @@ app.get('/api/agentes/tablero', async (req, res) => {
 
     res.json({ pisos: Object.keys(tablero).sort(), tablero, capacidadMesa });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -614,7 +636,7 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
 
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -629,7 +651,7 @@ app.get('/api/edificios', requireRol('admin', 'observador'), async (req, res) =>
     const { rows } = await pool.query('SELECT id, nombre FROM edificios ORDER BY nombre');
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -644,7 +666,7 @@ app.post('/api/edificios', requireRol('admin'), async (req, res) => {
     res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un edificio con ese nombre' });
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -662,7 +684,7 @@ app.put('/api/edificios/capacidad-mesa', requireRol('admin', 'it'), async (req, 
     await pool.query('UPDATE edificios SET capacidad_mesa = $1 WHERE id = $2', [capacidad, scope]);
     res.json({ ok: true, capacidad });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -677,7 +699,7 @@ app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
     const { rows } = await pool.query(q, params);
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -699,7 +721,7 @@ app.post('/api/usuarios', requireRol('admin'), async (req, res) => {
     res.status(201).json({ id: rows[0].id });
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'El nombre de usuario ya existe' });
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -725,7 +747,7 @@ app.put('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     if (err.code === '23505') return res.status(400).json({ error: 'El nombre de usuario ya existe' });
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
@@ -737,7 +759,7 @@ app.delete('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
     await pool.query('DELETE FROM usuarios WHERE id = $1', [req.params.id]);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    error500(res, err);
   }
 });
 
