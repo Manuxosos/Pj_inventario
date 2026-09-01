@@ -140,6 +140,13 @@
   padding: 24px;
 }
 
+.tab-suspense-fallback {
+  padding: 60px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
 /* Sin transform: cualquier transform en un ancestro rompe el position:fixed
    de los modales (los reposiciona relativo a este contenedor en vez del
    viewport). Solo animamos opacity para evitar ese problema. */

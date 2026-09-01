@@ -1,17 +1,21 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
-import EquiposList from './components/EquiposList';
-import EquipoModal from './components/EquipoModal';
-import Dashboard from './components/Dashboard';
-import Usuarios from './components/Usuarios';
-import Tareas from './components/Tareas';
-import Agentes from './components/Agentes';
-import GlobalSearch from './components/GlobalSearch';
 import Login from './components/Login';
 import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
 import { colorAgente } from './agenteColor';
 import './App.css';
+
+// Carga diferida: cada pestaña (y sus dependencias pesadas, como recharts
+// en Dashboard) se descarga recien cuando se necesita, en vez de ir toda
+// junta en el bundle inicial.
+const EquiposList  = lazy(() => import('./components/EquiposList'));
+const EquipoModal  = lazy(() => import('./components/EquipoModal'));
+const Dashboard    = lazy(() => import('./components/Dashboard'));
+const Usuarios     = lazy(() => import('./components/Usuarios'));
+const Tareas       = lazy(() => import('./components/Tareas'));
+const Agentes      = lazy(() => import('./components/Agentes'));
+const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 
 function iniciales(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -206,40 +210,44 @@ export default function App() {
 
       <main className="app-main">
         <div key={tab} className="tab-fade">
-          {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} refresh={refresh} />}
-          {tab === 'inventario' && (
-            <EquiposList
-              refresh={refresh}
-              externalFilters={dashboardFilter}
-              rol={rol}
-              onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
-              onView={(equipo) => setModal({ mode: 'view', equipo })}
-              onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}
-              showToast={showToast}
-            />
-          )}
-          {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />}
-          {tab === 'agentes'  && (
-            <Agentes
-              rol={rol}
-              onOpenEquipo={handleOpenEquipo}
-              onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
-              onGoToInventario={() => { setDashboardFilter(null); setTab('inventario'); }}
-              refresh={refresh}
-            />
-          )}
-          {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} refresh={refresh} />}
+          <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
+            {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} refresh={refresh} />}
+            {tab === 'inventario' && (
+              <EquiposList
+                refresh={refresh}
+                externalFilters={dashboardFilter}
+                rol={rol}
+                onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
+                onView={(equipo) => setModal({ mode: 'view', equipo })}
+                onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}
+                showToast={showToast}
+              />
+            )}
+            {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />}
+            {tab === 'agentes'  && (
+              <Agentes
+                rol={rol}
+                onOpenEquipo={handleOpenEquipo}
+                onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+                onGoToInventario={() => { setDashboardFilter(null); setTab('inventario'); }}
+                refresh={refresh}
+              />
+            )}
+            {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} refresh={refresh} />}
+          </Suspense>
         </div>
       </main>
 
       {modal && (
-        <EquipoModal
-          mode={modal.mode}
-          equipo={modal.equipo}
-          rol={rol}
-          onClose={() => setModal(null)}
-          onSaved={handleSaved}
-        />
+        <Suspense fallback={null}>
+          <EquipoModal
+            mode={modal.mode}
+            equipo={modal.equipo}
+            rol={rol}
+            onClose={() => setModal(null)}
+            onSaved={handleSaved}
+          />
+        </Suspense>
       )}
 
       {toast && (
@@ -247,11 +255,13 @@ export default function App() {
       )}
 
       {buscadorAbierto && (
-        <GlobalSearch
-          onClose={() => setBuscadorAbierto(false)}
-          onOpenEquipo={handleOpenEquipo}
-          onGoToTab={setTab}
-        />
+        <Suspense fallback={null}>
+          <GlobalSearch
+            onClose={() => setBuscadorAbierto(false)}
+            onOpenEquipo={handleOpenEquipo}
+            onGoToTab={setTab}
+          />
+        </Suspense>
       )}
     </div>
   );
