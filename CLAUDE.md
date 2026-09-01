@@ -30,16 +30,16 @@ frontend/src/
 
 Tres roles, controlados por `requireRol(...roles)` en `server.js` y por `rol` extraído del JWT en el frontend:
 
-- **admin**: todo + gestión de usuarios (`/api/usuarios` CRUD)
-- **it**: CRUD de equipos (incluye eliminar) + exportar Excel — sin gestión de usuarios
-- **observador**: solo lectura del dashboard e inventario
+- **admin**: todo + gestión de usuarios (`/api/usuarios` CRUD) + exportar Excel
+- **it**: CRUD de equipos (incluye eliminar) — sin gestión de usuarios, sin exportar Excel
+- **observador**: solo lectura del dashboard e inventario + exportar Excel
 
 Usuarios actuales en la BD: `admin` (rol admin), `usuario.it` (rol it), `obsv.it` (rol observador).
 Las contraseñas NO se documentan acá por ser un repo público — consultarlas de forma segura (gestor de contraseñas, etc.), nunca committearlas.
 
 ## Convenciones importantes
 
-- Las rutas `/api/equipos` (POST/PUT/DELETE) y `/api/exportar` requieren rol admin o it
+- Las rutas `/api/equipos` (POST/PUT/DELETE) requieren rol admin o it; `/api/exportar` requiere rol admin u observador
 - Las rutas `/api/usuarios` requieren rol admin
 - El JWT viejo (emitido antes de que existiera el campo `rol`) no tiene ese campo — si la UI muestra el rol incorrecto, cerrar sesión y volver a entrar
 - El filtro de **estado** se quitó del dropdown del inventario; solo queda el filtro de **piso**. El filtrado por estado se hace navegando desde el dashboard (clicks en gráficas/KPIs pasan `estado` o `estadoIn` como filtro)
