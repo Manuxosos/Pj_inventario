@@ -25,7 +25,9 @@ api.interceptors.response.use(
   r => r,
   err => {
     if (err.response?.status === 401) {
+      const habiaSesion = !!localStorage.getItem('token');
       localStorage.removeItem('token');
+      if (habiaSesion) sessionStorage.setItem('sesionExpirada', '1');
       window.location.reload();
     }
     return Promise.reject(err);

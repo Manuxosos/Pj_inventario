@@ -6,7 +6,13 @@ import './Login.css';
 export default function Login({ onLogin }) {
   const [form, setForm] = useState({ usuario: '', password: '' });
   const [showPass, setShowPass] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(() => {
+    if (sessionStorage.getItem('sesionExpirada')) {
+      sessionStorage.removeItem('sesionExpirada');
+      return 'Tu sesión expiró. Volvé a iniciar sesión.';
+    }
+    return '';
+  });
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
