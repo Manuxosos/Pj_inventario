@@ -64,7 +64,12 @@ export default function Login({ onLogin }) {
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
               />
-              <button type="button" className="pass-toggle" onClick={() => setShowPass(s => !s)}>
+              <button
+                type="button"
+                className="pass-toggle"
+                onClick={() => setShowPass(s => !s)}
+                aria-label={showPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>

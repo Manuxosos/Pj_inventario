@@ -230,10 +230,25 @@
 .user-badge {
   display: flex;
   align-items: center;
-  padding: 5px 12px;
+  gap: 8px;
+  padding: 5px 12px 5px 5px;
   background: rgba(0,245,255,0.05);
   border: 1px solid rgba(0,245,255,0.12);
   border-radius: var(--radius);
+}
+.user-badge-avatar {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #04121c;
+  background: var(--avatar-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--avatar-color) 60%, transparent);
 }
 .user-badge-name { font-size: 12px; font-weight: 600; color: var(--text); line-height: 1.4; }
 .user-badge-rol  { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }

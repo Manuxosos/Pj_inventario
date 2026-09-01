@@ -16,7 +16,7 @@ export default function ConfirmModal({ title, message, confirmLabel = 'Eliminar'
             <AlertTriangle size={20} color="var(--neon-pink)" />
             <h2 style={{ margin: 0 }}>{title}</h2>
           </div>
-          <button className="modal-close" onClick={onCancel}>✕</button>
+          <button className="modal-close" onClick={onCancel} aria-label="Cerrar">✕</button>
         </div>
         <div className="modal-body" style={{ gap: 20 }}>
           <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>{message}</p>

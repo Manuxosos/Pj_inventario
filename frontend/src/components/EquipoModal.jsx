@@ -115,7 +115,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
       <div className="modal-box" style={{ maxWidth: 420 }}>
         <div className="modal-header">
           <h2>{notaEdit.nota ? 'Editar nota' : 'Agregar nota'}</h2>
-          <button className="modal-close" onClick={() => setNotaEdit(null)}>✕</button>
+          <button className="modal-close" onClick={() => setNotaEdit(null)} aria-label="Cerrar">✕</button>
         </div>
         <div className="modal-body">
           <section className="form-section">
@@ -143,7 +143,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
       <div className="modal-box">
         <div className="modal-header">
           <h2>{title}</h2>
-          <button className="modal-close" onClick={intentarCerrar}>✕</button>
+          <button className="modal-close" onClick={intentarCerrar} aria-label="Cerrar">✕</button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit}>

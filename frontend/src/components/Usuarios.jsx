@@ -225,7 +225,7 @@ function UsuarioModal({ mode, data, edificios, onClose, onSaved }) {
       <div className="modal-box" style={{ maxWidth: 460 }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Editar usuario' : 'Nuevo usuario'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
         <form className="modal-body" onSubmit={handleSubmit}>

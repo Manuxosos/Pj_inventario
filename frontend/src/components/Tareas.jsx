@@ -232,7 +232,7 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
       <div className="modal-box" style={{ maxWidth: 500 }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Editar tarea' : 'Nueva tarea'}</h2>
-          <button className="modal-close" onClick={intentarCerrar}>✕</button>
+          <button className="modal-close" onClick={intentarCerrar} aria-label="Cerrar">✕</button>
         </div>
         <form className="modal-body" onSubmit={handleSubmit}>
           <section className="form-section">

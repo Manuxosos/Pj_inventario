@@ -1,5 +1,16 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Anillo de foco visible al navegar con teclado (no aparece con click de mouse) */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--neon-cyan, #00f5ff);
+  outline-offset: 2px;
+}
+
 :root {
   /* Neon palette */
   --neon-cyan:    #00f5ff;

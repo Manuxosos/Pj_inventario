@@ -10,7 +10,7 @@ export default function PisoAgentesModal({ piso, agentes, onClose }) {
             <h2>Agentes — {piso}</h2>
             <p className="piso-agentes-sub"><Users size={13} /> {agentes.length} {agentes.length === 1 ? 'agente' : 'agentes'}</p>
           </div>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar">✕</button>
         </div>
 
         <div className="modal-body">

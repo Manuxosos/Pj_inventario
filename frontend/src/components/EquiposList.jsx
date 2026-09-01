@@ -364,14 +364,14 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
                   </td>
                   <td>{eq.responsable || '—'}</td>
                   <td className="actions-cell">
-                    <button className="btn btn-ghost btn-sm" onClick={() => onView(eq)} title="Ver detalle"><Eye size={14}/></button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => onView(eq)} title="Ver detalle" aria-label="Ver detalle"><Eye size={14}/></button>
                     {puedeEditar && onEdit && (
-                      <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar"><Pencil size={14}/></button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar" aria-label="Editar"><Pencil size={14}/></button>
                     )}
                     {puedeEditar && (
                       <button className="btn btn-ghost btn-sm danger-btn"
                         onClick={() => setConfirmDelete({ id: eq.id, label: eq.id_activo || eq.marca_modelo || `Equipo #${eq.id}` })}
-                        disabled={deleting === eq.id} title="Eliminar"><Trash2 size={14}/></button>
+                        disabled={deleting === eq.id} title="Eliminar" aria-label="Eliminar"><Trash2 size={14}/></button>
                     )}
                   </td>
                 </tr>
@@ -432,7 +432,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
             <Trash2 size={13} /> Eliminar
           </button>
 
-          <button className="btn-icon-neon bulk-bar-cerrar" onClick={() => setSeleccion(new Set())} title="Cancelar selección">
+          <button className="btn-icon-neon bulk-bar-cerrar" onClick={() => setSeleccion(new Set())} title="Cancelar selección" aria-label="Cancelar selección">
             <X size={15} />
           </button>
         </div>

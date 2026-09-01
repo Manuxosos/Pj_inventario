@@ -57,7 +57,7 @@ export default function PapeleraModal({ onClose, onCambio, showToast }) {
       <div className="modal-box papelera-box">
         <div className="modal-header">
           <h2>Papelera de equipos</h2>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
         </div>
 
         <div className="modal-body">
@@ -81,7 +81,8 @@ export default function PapeleraModal({ onClose, onCambio, showToast }) {
                       <RotateCcw size={13} /> Restaurar
                     </button>
                     <button className="btn btn-danger btn-sm" disabled={procesando === eq.id}
-                      onClick={() => setConfirmarBorrado({ id: eq.id, label: eq.marca_modelo || eq.id_activo || `Equipo #${eq.id}` })}>
+                      onClick={() => setConfirmarBorrado({ id: eq.id, label: eq.marca_modelo || eq.id_activo || `Equipo #${eq.id}` })}
+                      title="Eliminar definitivamente" aria-label="Eliminar definitivamente">
                       <Trash2 size={13} />
                     </button>
                   </div>

@@ -63,7 +63,7 @@ export default function GlobalSearch({ onClose, onOpenEquipo, onGoToTab }) {
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
-          <button className="modal-close" onClick={onClose}><X size={16} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={16} /></button>
         </div>
 
         <div className="global-search-body">

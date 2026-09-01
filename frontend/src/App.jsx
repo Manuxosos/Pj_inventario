@@ -10,7 +10,12 @@ import GlobalSearch from './components/GlobalSearch';
 import Login from './components/Login';
 import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
+import { colorAgente } from './agenteColor';
 import './App.css';
+
+function iniciales(nombre) {
+  return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
 
 function getUserInfo() {
   const token = localStorage.getItem('token');
@@ -156,11 +161,17 @@ export default function App() {
           </nav>
 
           <div className="header-actions">
-            <button className="btn-icon-neon" onClick={() => setBuscadorAbierto(true)} title="Buscar (Ctrl+K)">
+            <button className="btn-icon-neon" onClick={() => setBuscadorAbierto(true)} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
               <Search size={16} />
             </button>
             {userInfo && (
               <div className="user-badge">
+                <div
+                  className="user-badge-avatar"
+                  style={{ '--avatar-color': colorAgente(userInfo.nombre || userInfo.usuario) }}
+                >
+                  {iniciales(userInfo.nombre || userInfo.usuario)}
+                </div>
                 <div>
                   <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
                   <div className="user-badge-rol">{rol}</div>
@@ -172,7 +183,7 @@ export default function App() {
                 <PlusCircle size={14} /> Nuevo Equipo
               </button>
             )}
-            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión">
+            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
               <LogOut size={16} />
             </button>
           </div>

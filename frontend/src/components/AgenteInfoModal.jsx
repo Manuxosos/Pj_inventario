@@ -38,7 +38,7 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
               <p className="agente-info-sub">{piso} · Mesa {mesa}</p>
             </div>
           </div>
-          <button className="modal-close" onClick={onClose}><X size={18} /></button>
+          <button className="modal-close" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
         </div>
 
         <div className="modal-body">
