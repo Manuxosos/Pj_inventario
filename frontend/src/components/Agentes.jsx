@@ -41,7 +41,7 @@ function Asiento({ nombre, estado, draggable, dragging, onDragStart, onDragEnd, 
   );
 }
 
-export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
+export default function Agentes({ rol, onOpenEquipo, onEditEquipo, onGoToInventario, refresh }) {
   const puedeMover = rol === 'admin' || rol === 'it';
   const [tablero, setTablero] = useState({});
   const [pisos, setPisos] = useState([]);
@@ -151,7 +151,14 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, refresh }) {
       </div>
 
       {pisos.length === 0 ? (
-        <div className="table-empty">No hay agentes con equipos asignados a ningún piso todavía.</div>
+        <div className="table-empty">
+          <p>No hay agentes con equipos asignados a ningún piso todavía.</p>
+          {puedeMover && onGoToInventario && (
+            <button className="btn btn-primary btn-sm" onClick={onGoToInventario}>
+              Ir a Inventario
+            </button>
+          )}
+        </div>
       ) : (
         <div className="agentes-pisos">
           {pisos.map(piso => {

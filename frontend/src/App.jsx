@@ -201,6 +201,7 @@ export default function App() {
               rol={rol}
               onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
               onView={(equipo) => setModal({ mode: 'view', equipo })}
+              onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}
               showToast={showToast}
             />
           )}
@@ -210,6 +211,7 @@ export default function App() {
               rol={rol}
               onOpenEquipo={handleOpenEquipo}
               onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+              onGoToInventario={() => { setDashboardFilter(null); setTab('inventario'); }}
               refresh={refresh}
             />
           )}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash } from 'lucide-react';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
 import './EquiposList.css';
@@ -46,7 +46,7 @@ function leerGuardado(key) {
   } catch { return null; }
 }
 
-export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView, showToast }) {
+export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView, onCreate, showToast }) {
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin = rol === 'admin';
   const [equipos, setEquipos] = useState([]);
@@ -310,7 +310,25 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         {loading ? (
           <TableSkeleton conCheckbox={puedeEditar} />
         ) : equipos.length === 0 ? (
-          <div className="table-empty">No se encontraron equipos.</div>
+          <div className="table-empty">
+            {hayFiltrosActivos ? (
+              <>
+                <p>No se encontraron equipos con estos filtros.</p>
+                <button className="btn btn-secondary btn-sm" onClick={() => setFilters({ ...FILTROS_VACIOS })}>
+                  Quitar filtros
+                </button>
+              </>
+            ) : (
+              <>
+                <p>Todavía no hay equipos cargados.</p>
+                {onCreate && (
+                  <button className="btn btn-primary btn-sm" onClick={onCreate}>
+                    <PlusCircle size={14} /> Agregar el primero
+                  </button>
+                )}
+              </>
+            )}
+          </div>
         ) : (
           <table className="equip-table">
             <thead>
