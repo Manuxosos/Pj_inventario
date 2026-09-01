@@ -87,6 +87,9 @@
   vertical-align: middle;
 }
 
+.equip-table-compacta th { padding: 6px 14px; }
+.equip-table-compacta td { padding: 4px 14px; font-size: 12.5px; }
+
 .equip-row { transition: background 0.15s; }
 .equip-row:hover { background: var(--table-hover); }
 .equip-row:last-child td { border-bottom: none; }

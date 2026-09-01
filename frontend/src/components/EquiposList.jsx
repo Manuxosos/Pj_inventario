@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle } from 'lucide-react';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
 import './EquiposList.css';
@@ -37,6 +37,7 @@ const ACCESORIO_LABEL = {
 
 const FILTERS_KEY = 'inventario_filtros_v1';
 const SORT_KEY = 'inventario_orden_v1';
+const DENSIDAD_KEY = 'inventario_densidad_v1';
 const FILTROS_VACIOS = { search: '', piso: '', estado: '', estadoIn: '', ram: '', modelo: '', accesorio: '' };
 
 function leerGuardado(key) {
@@ -60,6 +61,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, label } | { ids: [] }
   const [sortConfig, setSortConfig] = useState(() => leerGuardado(SORT_KEY) || { key: null, direction: 'asc' });
+  const [densidad, setDensidad] = useState(() => leerGuardado(DENSIDAD_KEY) || 'comoda'); // 'comoda' | 'compacta'
   const [seleccion, setSeleccion] = useState(new Set());
   const [nuevoEstadoLote, setNuevoEstadoLote] = useState('');
   const [nuevoPisoLote, setNuevoPisoLote] = useState('');
@@ -90,6 +92,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   // Persistir filtros y orden para recordarlos la próxima vez
   useEffect(() => { localStorage.setItem(FILTERS_KEY, JSON.stringify(filters)); }, [filters]);
   useEffect(() => { localStorage.setItem(SORT_KEY, JSON.stringify(sortConfig)); }, [sortConfig]);
+  useEffect(() => { localStorage.setItem(DENSIDAD_KEY, JSON.stringify(densidad)); }, [densidad]);
 
   const buildParams = () => {
     const params = {};
@@ -278,6 +281,15 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
 
         <div className="filters-bar-spacer" />
 
+        <button
+          className="btn-icon-neon"
+          onClick={() => setDensidad(d => d === 'comoda' ? 'compacta' : 'comoda')}
+          title={densidad === 'comoda' ? 'Vista compacta' : 'Vista cómoda'}
+          aria-label={densidad === 'comoda' ? 'Vista compacta' : 'Vista cómoda'}
+        >
+          {densidad === 'comoda' ? <Rows4 size={16} /> : <Rows3 size={16} />}
+        </button>
+
         {puedeEditar && (
           <button className="btn btn-secondary" onClick={handleExportar} disabled={exportando}>
             <Download size={14} /> {exportando ? 'Exportando...' : hayFiltrosActivos ? 'Exportar filtrado' : 'Exportar Excel'}
@@ -330,7 +342,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
             )}
           </div>
         ) : (
-          <table className="equip-table">
+          <table className={`equip-table ${densidad === 'compacta' ? 'equip-table-compacta' : ''}`}>
             <thead>
               <tr>
                 {puedeEditar && (
