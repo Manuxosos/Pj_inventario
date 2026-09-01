@@ -83,6 +83,7 @@
   vertical-align: middle;
 }
 
+.equip-row { transition: background 0.15s; }
 .equip-row:hover { background: var(--table-hover); }
 .equip-row:last-child td { border-bottom: none; }
 .equip-row-selected { background: rgba(0,245,255,0.05); }
