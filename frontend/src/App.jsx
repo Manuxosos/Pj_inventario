@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2 } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
 import EquiposList from './components/EquiposList';
 import EquipoModal from './components/EquipoModal';
 import Dashboard from './components/Dashboard';
@@ -35,6 +35,7 @@ export default function App() {
   const [dashboardFilter, setDashboardFilter] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
   const [buscadorAbierto, setBuscadorAbierto] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
   const userInfo = autenticado ? getUserInfo() : null;
   const rol      = userInfo?.rol || 'observador';
@@ -118,74 +119,86 @@ export default function App() {
       <header className="app-header">
         <div className="header-inner">
 
-          <div className="header-brand" onClick={() => setTab('dashboard')} style={{ cursor: 'pointer' }}>
+          <div className="header-brand" onClick={() => { setTab('dashboard'); setMenuAbierto(false); }} style={{ cursor: 'pointer' }}>
             <Monitor size={26} color="#60a5fa" />
             <h1>Inventario IT</h1>
           </div>
 
-          {esGlobal && (
-            <div className="edificio-selector" title="Edificio">
-              <Building2 size={15} />
-              <select
-                className="form-input"
-                value={edificioSel ?? ''}
-                onChange={e => handleEdificioChange(e.target.value)}
-                style={{ width: 'auto', padding: '4px 8px' }}
-              >
-                <option value="">Todos los edificios</option>
-                {edificios.map(ed => (
-                  <option key={ed.id} value={ed.id}>{ed.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <button
+            className="header-menu-toggle"
+            onClick={() => setMenuAbierto(m => !m)}
+            aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+          >
+            {menuAbierto ? <X size={20} /> : <Menu size={20} />}
+          </button>
 
-          <nav className="header-nav">
-            <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>
-              <LayoutDashboard size={15} /> Dashboard
-            </button>
-            <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => { setDashboardFilter(null); setTab('inventario'); }}>
-              <ClipboardList size={15} /> Inventario
-            </button>
-            <button className={`nav-tab ${tab === 'tareas' ? 'active' : ''}`} onClick={() => setTab('tareas')}>
-              <CheckSquare size={15} /> Tareas
-            </button>
-            <button className={`nav-tab ${tab === 'agentes' ? 'active' : ''}`} onClick={() => setTab('agentes')}>
-              <Armchair size={15} /> Agentes
-            </button>
-            {esAdmin && (
-              <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => setTab('usuarios')}>
-                <Users size={15} /> Usuarios
-              </button>
-            )}
-          </nav>
+          <div className={`header-collapsible ${menuAbierto ? 'header-collapsible-open' : ''}`}>
 
-          <div className="header-actions">
-            <button className="btn-icon-neon" onClick={() => setBuscadorAbierto(true)} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
-              <Search size={16} />
-            </button>
-            {userInfo && (
-              <div className="user-badge">
-                <div
-                  className="user-badge-avatar"
-                  style={{ '--avatar-color': colorAgente(userInfo.nombre || userInfo.usuario) }}
+            {esGlobal && (
+              <div className="edificio-selector" title="Edificio">
+                <Building2 size={15} />
+                <select
+                  className="form-input"
+                  value={edificioSel ?? ''}
+                  onChange={e => handleEdificioChange(e.target.value)}
+                  style={{ width: 'auto', padding: '4px 8px' }}
                 >
-                  {iniciales(userInfo.nombre || userInfo.usuario)}
-                </div>
-                <div>
-                  <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
-                  <div className="user-badge-rol">{rol}</div>
-                </div>
+                  <option value="">Todos los edificios</option>
+                  {edificios.map(ed => (
+                    <option key={ed.id} value={ed.id}>{ed.nombre}</option>
+                  ))}
+                </select>
               </div>
             )}
-            {tab === 'inventario' && puedeEditar && (!esGlobal || edificioSel != null) && (
-              <button className="btn btn-primary" onClick={() => setModal({ mode: 'create' })}>
-                <PlusCircle size={14} /> Nuevo Equipo
+
+            <nav className="header-nav">
+              <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => { setTab('dashboard'); setMenuAbierto(false); }}>
+                <LayoutDashboard size={15} /> Dashboard
               </button>
-            )}
-            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
-              <LogOut size={16} />
-            </button>
+              <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => { setDashboardFilter(null); setTab('inventario'); setMenuAbierto(false); }}>
+                <ClipboardList size={15} /> Inventario
+              </button>
+              <button className={`nav-tab ${tab === 'tareas' ? 'active' : ''}`} onClick={() => { setTab('tareas'); setMenuAbierto(false); }}>
+                <CheckSquare size={15} /> Tareas
+              </button>
+              <button className={`nav-tab ${tab === 'agentes' ? 'active' : ''}`} onClick={() => { setTab('agentes'); setMenuAbierto(false); }}>
+                <Armchair size={15} /> Agentes
+              </button>
+              {esAdmin && (
+                <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => { setTab('usuarios'); setMenuAbierto(false); }}>
+                  <Users size={15} /> Usuarios
+                </button>
+              )}
+            </nav>
+
+            <div className="header-actions">
+              <button className="btn-icon-neon" onClick={() => { setBuscadorAbierto(true); setMenuAbierto(false); }} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
+                <Search size={16} />
+              </button>
+              {userInfo && (
+                <div className="user-badge">
+                  <div
+                    className="user-badge-avatar"
+                    style={{ '--avatar-color': colorAgente(userInfo.nombre || userInfo.usuario) }}
+                  >
+                    {iniciales(userInfo.nombre || userInfo.usuario)}
+                  </div>
+                  <div>
+                    <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
+                    <div className="user-badge-rol">{rol}</div>
+                  </div>
+                </div>
+              )}
+              {tab === 'inventario' && puedeEditar && (!esGlobal || edificioSel != null) && (
+                <button className="btn btn-primary" onClick={() => { setModal({ mode: 'create' }); setMenuAbierto(false); }}>
+                  <PlusCircle size={14} /> Nuevo Equipo
+                </button>
+              )}
+              <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
+                <LogOut size={16} />
+              </button>
+            </div>
+
           </div>
 
         </div>

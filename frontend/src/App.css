@@ -67,6 +67,53 @@
 
 .header-actions { display: flex; gap: 8px; align-items: center; min-width: 180px; justify-content: flex-end; }
 
+/* ── Menu hamburguesa (solo mobile) ── */
+.header-menu-toggle {
+  display: none;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px;
+  border-radius: var(--radius);
+  align-items: center;
+  justify-content: center;
+}
+
+.header-collapsible {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  justify-content: space-between;
+}
+
+@media (max-width: 880px) {
+  .header-menu-toggle { display: inline-flex; }
+
+  .header-collapsible {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    padding: 16px 24px 22px;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 16px 30px rgba(0,0,0,0.45);
+  }
+  .header-collapsible.header-collapsible-open { display: flex; }
+
+  .header-nav { flex-direction: column; gap: 4px; }
+  .nav-tab { width: 100%; }
+
+  .header-actions { flex-wrap: wrap; justify-content: flex-start; }
+
+  .edificio-selector select { width: 100% !important; }
+}
+
 /* ── Logout icon ── */
 .btn-icon-neon {
   background: transparent;

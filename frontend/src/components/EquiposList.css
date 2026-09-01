@@ -29,7 +29,7 @@
 .filters-bar-spacer { flex: 1; }
 
 .table-wrapper {
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .table-loading, .table-empty {
