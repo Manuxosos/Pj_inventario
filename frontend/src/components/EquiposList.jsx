@@ -50,6 +50,7 @@ function leerGuardado(key) {
 export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView, onCreate, showToast }) {
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin = rol === 'admin';
+  const puedeExportar = rol === 'admin' || rol === 'observador';
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
@@ -290,7 +291,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
           {densidad === 'comoda' ? <Rows4 size={16} /> : <Rows3 size={16} />}
         </button>
 
-        {puedeEditar && (
+        {puedeExportar && (
           <button className="btn btn-secondary" onClick={handleExportar} disabled={exportando}>
             <Download size={14} /> {exportando ? 'Exportando...' : hayFiltrosActivos ? 'Exportar filtrado' : 'Exportar Excel'}
           </button>

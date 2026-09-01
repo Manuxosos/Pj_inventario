@@ -302,8 +302,8 @@ app.get('/api/opciones', async (req, res) => {
   }
 });
 
-// GET /api/exportar — admin e IT
-app.get('/api/exportar', requireRol('admin', 'it'), async (req, res) => {
+// GET /api/exportar — admin y observador
+app.get('/api/exportar', requireRol('admin', 'observador'), async (req, res) => {
   try {
     const { q, params } = buildEquiposQuery(req.query, scopeEdificio(req));
     const { rows: equipos } = await pool.query(q, params);
