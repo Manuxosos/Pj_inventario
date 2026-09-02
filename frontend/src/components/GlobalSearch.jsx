@@ -68,7 +68,7 @@ export default function GlobalSearch({ onClose, onOpenEquipo, onGoToTab }) {
 
         <div className="global-search-body">
           {!q ? (
-            <p className="global-search-hint">Escribí para buscar en todo el sistema.</p>
+            <p className="global-search-hint">Escribe para buscar en todo el sistema.</p>
           ) : sinResultados ? (
             <p className="global-search-hint">Sin resultados para "{query}".</p>
           ) : (

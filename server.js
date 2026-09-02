@@ -73,7 +73,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req.headers['x-real-ip'] || req.ip),
-  message: { error: 'Demasiados intentos de inicio de sesión. Probá de nuevo en unos minutos.' },
+  message: { error: 'Demasiados intentos de inicio de sesión. Prueba de nuevo en unos minutos.' },
 });
 
 app.post('/api/login', loginLimiter, async (req, res) => {

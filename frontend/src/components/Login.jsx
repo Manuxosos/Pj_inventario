@@ -11,8 +11,8 @@ export default function Login({ onLogin }) {
     if (motivo) {
       sessionStorage.removeItem('sesionExpirada');
       return motivo === 'inactividad'
-        ? 'Se cerró tu sesión por inactividad. Volvé a iniciar sesión.'
-        : 'Tu sesión expiró. Volvé a iniciar sesión.';
+        ? 'Se cerró tu sesión por inactividad. Vuelve a iniciar sesión.'
+        : 'Tu sesión expiró. Vuelve a iniciar sesión.';
     }
     return '';
   });

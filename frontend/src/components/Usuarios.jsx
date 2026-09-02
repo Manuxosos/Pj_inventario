@@ -167,7 +167,7 @@ export default function Usuarios({ miId, refresh }) {
       {confirmDelete && (
         <ConfirmModal
           title="Eliminar usuario"
-          message={`¿Estás seguro de que querés eliminar al usuario "${confirmDelete.nombre}"? Esta acción no se puede deshacer.`}
+          message={`¿Estás seguro de que quieres eliminar al usuario "${confirmDelete.nombre}"? Esta acción no se puede deshacer.`}
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
         />

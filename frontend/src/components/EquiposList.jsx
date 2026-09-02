@@ -138,7 +138,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         setConfirmDelete(null);
         showToast?.(`${idsSet.size} equipos movidos a la papelera`);
       } catch (err) {
-        showToast?.('Error al eliminar algunos equipos. Revisá cuáles se aplicaron.', 'error');
+        showToast?.('Error al eliminar algunos equipos. Revisa cuáles se aplicaron.', 'error');
       } finally {
         setAplicandoLote(false);
       }
@@ -186,7 +186,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
       setSeleccion(new Set());
       showToast?.(`${seleccionados.length} equipos actualizados`);
     } catch (err) {
-      showToast?.('Error al aplicar el cambio en lote. Revisá cuáles se aplicaron.', 'error');
+      showToast?.('Error al aplicar el cambio en lote. Revisa cuáles se aplicaron.', 'error');
     } finally {
       setAplicandoLote(false);
     }
@@ -416,8 +416,8 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
         <ConfirmModal
           title={confirmDelete.ids ? `Eliminar ${confirmDelete.ids.length} equipos` : 'Eliminar equipo'}
           message={confirmDelete.ids
-            ? `¿Estás seguro de que querés mover los ${confirmDelete.ids.length} equipos seleccionados a la papelera?`
-            : `¿Estás seguro de que querés mover el equipo "${confirmDelete.label}" a la papelera?`}
+            ? `¿Estás seguro de que quieres mover los ${confirmDelete.ids.length} equipos seleccionados a la papelera?`
+            : `¿Estás seguro de que quieres mover el equipo "${confirmDelete.label}" a la papelera?`}
           confirmLabel="Mover a la papelera"
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}

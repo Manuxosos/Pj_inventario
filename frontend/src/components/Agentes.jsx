@@ -124,8 +124,8 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, onGoToInventa
           <h2 className="agentes-title">Agentes por piso</h2>
           <p className="agentes-sub">
             {puedeMover
-              ? 'Arrastrá un agente para moverlo de mesa o de piso, o hacé click para ver su información.'
-              : 'Hacé click en un agente para ver su información.'}
+              ? 'Arrastra un agente para moverlo de mesa o de piso, o haz click para ver su información.'
+              : 'Haz click en un agente para ver su información.'}
           </p>
         </div>
         {puedeMover && (

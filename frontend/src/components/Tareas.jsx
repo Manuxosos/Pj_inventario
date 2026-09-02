@@ -300,7 +300,7 @@ function TareaModal({ mode, data, usuarios, onClose, onSaved }) {
       {confirmDescartar && (
         <ConfirmModal
           title="Descartar cambios"
-          message="Tenés cambios sin guardar. ¿Querés descartarlos y cerrar de todas formas?"
+          message="Tienes cambios sin guardar. ¿Quieres descartarlos y cerrar de todas formas?"
           confirmLabel="Descartar"
           onConfirm={onClose}
           onCancel={() => setConfirmDescartar(false)}
