@@ -7,9 +7,12 @@ export default function Login({ onLogin }) {
   const [form, setForm] = useState({ usuario: '', password: '' });
   const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState(() => {
-    if (sessionStorage.getItem('sesionExpirada')) {
+    const motivo = sessionStorage.getItem('sesionExpirada');
+    if (motivo) {
       sessionStorage.removeItem('sesionExpirada');
-      return 'Tu sesión expiró. Volvé a iniciar sesión.';
+      return motivo === 'inactividad'
+        ? 'Se cerró tu sesión por inactividad. Volvé a iniciar sesión.'
+        : 'Tu sesión expiró. Volvé a iniciar sesión.';
     }
     return '';
   });

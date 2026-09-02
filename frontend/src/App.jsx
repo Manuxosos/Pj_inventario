@@ -17,6 +17,8 @@ const Tareas       = lazy(() => import('./components/Tareas'));
 const Agentes      = lazy(() => import('./components/Agentes'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 
+const INACTIVIDAD_MS = 15 * 60 * 1000;
+
 function iniciales(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 }
@@ -95,6 +97,28 @@ export default function App() {
     if (!esGlobal) return;
     getEdificios().then(setEdificios).catch(() => {});
   }, [esGlobal]);
+
+  // Logout automático por inactividad (15 min sin mouse/teclado/scroll).
+  useEffect(() => {
+    if (!autenticado) return;
+    let timeoutId;
+    const cerrarPorInactividad = () => {
+      localStorage.removeItem('token');
+      sessionStorage.setItem('sesionExpirada', 'inactividad');
+      setAutenticado(false);
+    };
+    const reiniciarTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(cerrarPorInactividad, INACTIVIDAD_MS);
+    };
+    const eventos = ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart'];
+    eventos.forEach(e => window.addEventListener(e, reiniciarTimer));
+    reiniciarTimer();
+    return () => {
+      clearTimeout(timeoutId);
+      eventos.forEach(e => window.removeEventListener(e, reiniciarTimer));
+    };
+  }, [autenticado]);
 
   if (!autenticado) return <Login onLogin={() => setAutenticado(true)} />;
 
