@@ -187,6 +187,7 @@ app.post('/api/equipos', requireRol('admin', 'it'), async (req, res) => {
     );
     res.status(201).json({ id: newId });
   } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un equipo con ese número de serie' });
     error500(res, err);
   }
 });
@@ -224,6 +225,7 @@ app.put('/api/equipos/:id', requireRol('admin', 'it'), async (req, res) => {
     }
     res.json({ ok: true });
   } catch (err) {
+    if (err.code === '23505') return res.status(400).json({ error: 'Ya existe un equipo con ese número de serie' });
     error500(res, err);
   }
 });
