@@ -5,9 +5,10 @@ require('dotenv').config();
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET no está definido en el .env. Definí una clave larga y aleatoria antes de iniciar el servidor.');
+  throw new Error('JWT_SECRET no está definido en el .env. Define una clave larga y aleatoria antes de iniciar el servidor.');
 }
 const JWT_EXPIRES = '8h';
+const JWT_ALGORITHM = 'HS256';
 
 async function login(usuario, password) {
   const { rows } = await pool.query(
@@ -20,7 +21,7 @@ async function login(usuario, password) {
   return jwt.sign(
     { id: user.id, usuario: user.usuario, rol: user.rol, nombre: user.nombre, edificio_id: user.edificio_id },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES }
+    { expiresIn: JWT_EXPIRES, algorithm: JWT_ALGORITHM }
   );
 }
 
@@ -29,7 +30,7 @@ function verificarToken(req, res, next) {
   const token = auth && auth.startsWith('Bearer ') ? auth.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'No autorizado' });
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    req.user = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
     next();
   } catch {
     res.status(401).json({ error: 'Sesión expirada' });

@@ -198,6 +198,10 @@ function UsuarioModal({ mode, data, edificios, onClose, onSaved }) {
       setError('La contraseña es obligatoria.');
       return;
     }
+    if (form.password && form.password.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
     if (form.rol === 'it' && !form.edificio_id) {
       setError('Las cuentas IT deben tener un edificio asignado.');
       return;
@@ -251,6 +255,7 @@ function UsuarioModal({ mode, data, edificios, onClose, onSaved }) {
                 <input className="form-input" type="password" value={form.password}
                   onChange={e => set('password', e.target.value)}
                   placeholder={isEdit ? 'Dejar vacío para mantener' : 'Contraseña'} />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Mínimo 8 caracteres.</span>
               </div>
 
               <div className="form-group">

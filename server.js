@@ -711,6 +711,9 @@ app.post('/api/usuarios', requireRol('admin'), async (req, res) => {
     if (!nombre || !usuario || !password || !rol) {
       return res.status(400).json({ error: 'Todos los campos son obligatorios' });
     }
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
+    }
     if (rol === 'it' && !edificio_id) {
       return res.status(400).json({ error: 'Las cuentas IT deben tener un edificio asignado' });
     }
@@ -732,6 +735,9 @@ app.put('/api/usuarios/:id', requireRol('admin'), async (req, res) => {
     const { nombre, usuario, password, rol, activo, edificio_id } = req.body;
     if (rol === 'it' && !edificio_id) {
       return res.status(400).json({ error: 'Las cuentas IT deben tener un edificio asignado' });
+    }
+    if (password && password.length < 8) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' });
     }
     const edificioIdFinal = rol === 'admin' ? null : (edificio_id || null);
     if (password) {
