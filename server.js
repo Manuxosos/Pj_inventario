@@ -83,6 +83,7 @@ app.post('/api/login', loginLimiter, async (req, res) => {
     if (!token) return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     res.json({ token });
   } catch (err) {
+    if (err.bloqueado) return res.status(423).json({ error: err.message });
     error500(res, err);
   }
 });

@@ -27,8 +27,8 @@ export default function Login({ onLogin }) {
       const { token } = await loginApi(form.usuario, form.password);
       localStorage.setItem('token', token);
       onLogin();
-    } catch {
-      setError('Usuario o contraseña incorrectos.');
+    } catch (err) {
+      setError(err.response?.data?.error || 'Usuario o contraseña incorrectos.');
     } finally {
       setLoading(false);
     }

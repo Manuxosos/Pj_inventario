@@ -55,6 +55,12 @@ async function initSchema() {
     )
   `);
 
+  // Bloqueo por cuenta tras varios intentos fallidos de login seguidos
+  // (independiente del rate limiting por IP, que no frena un ataque
+  // distribuido contra una sola cuenta).
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS intentos_fallidos INTEGER NOT NULL DEFAULT 0`);
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS bloqueado_hasta TIMESTAMPTZ`);
+
   await pool.query(`
     CREATE OR REPLACE FUNCTION fn_set_updated_at()
     RETURNS TRIGGER AS $$
