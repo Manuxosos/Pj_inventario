@@ -227,7 +227,7 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
 
   const hayFiltrosActivos = Object.values(filters).some(Boolean);
   const enUso   = todos.filter(e => e.estado === 'En uso').length;
-  const enBodega = todos.filter(e => e.piso === 'BODEGA').length;
+  const enBodega = todos.filter(e => e.piso === 'BODEGA' || e.estado === 'Disponible').length;
   // Edificios de un solo piso (más bodega) no necesitan el filtro — se detecta
   // solo según los pisos que realmente existan en los datos de ese edificio.
   const mostrarFiltroPiso = opciones.pisos.length > 1;
