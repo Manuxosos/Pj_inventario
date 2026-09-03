@@ -3,13 +3,13 @@ const cors      = require('cors');
 const path      = require('path');
 const fs        = require('fs');
 const bcrypt    = require('bcryptjs');
-const ExcelJS   = require('exceljs');
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = rateLimit;
 require('dotenv').config();
 
 const { pool, initPromise } = require('./database');
 const { login, verificarToken } = require('./auth');
+const { construirWorkbookInventario } = require('./excelInventario');
 
 const app = express();
 
@@ -310,60 +310,7 @@ app.get('/api/exportar', requireRol('admin', 'observador'), async (req, res) => 
   try {
     const { q, params } = buildEquiposQuery(req.query, scopeEdificio(req));
     const { rows: equipos } = await pool.query(q, params);
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet('Equipos');
-    const cols = [
-      { header: 'ID Activo',         key: 'id_activo',        width: 12 },
-      { header: 'Cargador',          key: 'cargador',          width: 10 },
-      { header: 'ID EX',             key: 'id_ex',             width: 10 },
-      { header: 'Team',              key: 'team',              width: 18 },
-      { header: 'Marca/Modelo',      key: 'marca_modelo',      width: 24 },
-      { header: 'Procesador',        key: 'procesador',        width: 22 },
-      { header: 'RAM',               key: 'ram',               width: 10 },
-      { header: 'Disco Duro',        key: 'disco_duro',        width: 14 },
-      { header: 'SO (Versión)',       key: 'so',                width: 14 },
-      { header: 'Nº de Serie',       key: 'numero_serie',      width: 18 },
-      { header: 'Usuario',           key: 'usuario',           width: 16 },
-      { header: 'Estado',            key: 'estado',            width: 16 },
-      { header: 'Observación',       key: 'observacion',       width: 28 },
-      { header: 'Responsable',       key: 'responsable',       width: 20 },
-      { header: 'Audífono',          key: 'audifonos',         width: 10 },
-      { header: 'Mouse',             key: 'mouse',             width: 10 },
-      { header: 'Monitor',           key: 'monitor',           width: 10 },
-      { header: 'Adaptador Tp-Link', key: 'adaptador_tplink',  width: 18 },
-      { header: 'Estuche',           key: 'estuche',           width: 10 },
-    ];
-    ws.columns = cols;
-    const headerRow = ws.getRow(1);
-    headerRow.eachCell(cell => {
-      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
-      cell.alignment = { horizontal: 'center', vertical: 'middle' };
-      cell.border = { bottom: { style: 'thin', color: { argb: 'FFAAAAAA' } }, right: { style: 'thin', color: { argb: 'FFAAAAAA' } } };
-    });
-    headerRow.height = 20;
-    const pisoColors  = { 'PISO 2': 'FFDCE6F1', 'PISO 3': 'FFE2EFDA', 'PISO 4': 'FFFFF2CC', 'PISO 5': 'FFFCE4D6', 'PISO 7': 'FFEDEDED', 'BODEGA': 'FFF2F2F2' };
-    const estadoColors = { 'En uso agente': 'FFBDD7EE', 'En uso TI': 'FFBDD7EE', 'LISTA': 'FFC6EFCE', 'NO LISTA': 'FFFFC7CE', 'REVISION': 'FFFFEB9C', 'NUEVO': 'FFE2D0F1' };
-    const pisos = [...new Set(equipos.map(e => e.piso).filter(Boolean))];
-    for (const piso of pisos) {
-      const pisoRow = ws.addRow([piso]);
-      pisoRow.getCell(1).font = { bold: true, size: 12, color: { argb: 'FF1E3A5F' } };
-      pisoRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: pisoColors[piso] || 'FFF2F2F2' } };
-      pisoRow.height = 18;
-      ws.mergeCells(`A${pisoRow.number}:S${pisoRow.number}`);
-      for (const eq of equipos.filter(e => e.piso === piso)) {
-        const row = ws.addRow(cols.map(c => eq[c.key] || ''));
-        row.eachCell((cell, colNum) => {
-          cell.border = { bottom: { style: 'hair', color: { argb: 'FFCCCCCC' } }, right: { style: 'hair', color: { argb: 'FFCCCCCC' } } };
-          if (colNum === 12 && eq.estado && estadoColors[eq.estado]) {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: estadoColors[eq.estado] } };
-            cell.font = { bold: true };
-          }
-        });
-      }
-    }
-    ws.views = [{ state: 'frozen', ySplit: 1 }];
-    ws.autoFilter = { from: 'A1', to: 'S1' };
+    const wb = construirWorkbookInventario(equipos);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="inventario_${new Date().toISOString().slice(0,10)}.xlsx"`);
     await wb.xlsx.write(res);
