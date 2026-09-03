@@ -1,6 +1,6 @@
-// Informe semanal en Excel de todo el inventario (todos los edificios),
-// enviado por correo. Pensado para correr desde cron, ej. viernes 18:00:
-//   0 18 * * 5 cd /root/inventario && node scripts/reporte-semanal.js >> logs/reporte.log 2>&1
+// Informe mensual en Excel de todo el inventario (todos los edificios),
+// enviado por correo. Pensado para correr desde cron, el 1 de cada mes:
+//   0 18 1 * * cd /root/inventario && node scripts/reporte-mensual.js >> logs/reporte.log 2>&1
 require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
 const path = require('path');
 const fs = require('fs');
@@ -23,8 +23,8 @@ const archivo = path.join('/tmp', `inventario_informe_${fecha}.xlsx`);
     const wb = construirWorkbookInventario(equipos, { agruparPorEdificio: true });
     await wb.xlsx.writeFile(archivo);
     await enviarConAdjunto({
-      asunto: `Informe semanal de Inventario IT - ${fecha}`,
-      texto: `Informe semanal automático del inventario (todos los edificios), ${fecha}. Total de equipos: ${equipos.length}.`,
+      asunto: `Informe mensual de Inventario IT - ${fecha}`,
+      texto: `Informe mensual automático del inventario (todos los edificios), ${fecha}. Total de equipos: ${equipos.length}.`,
       archivoPath: archivo,
       nombreArchivo: `inventario_informe_${fecha}.xlsx`,
     });
@@ -32,7 +32,7 @@ const archivo = path.join('/tmp', `inventario_informe_${fecha}.xlsx`);
     console.log(`[${new Date().toISOString()}] Informe del ${fecha} enviado correctamente (${equipos.length} equipos).`);
     process.exit(0);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Error en informe semanal:`, err.message);
+    console.error(`[${new Date().toISOString()}] Error en informe mensual:`, err.message);
     process.exit(1);
   } finally {
     await pool.end();
