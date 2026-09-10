@@ -1,0 +1,64 @@
+.audifonos-card { padding: 18px; max-width: 320px; }
+
+.audifonos-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--neon-cyan);
+  margin-bottom: 14px;
+}
+
+.audifonos-card-header h3 {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+.audifonos-valor {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 14px rgba(0,245,255,0.5);
+}
+
+.audifonos-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.audifonos-edit input {
+  width: 90px;
+}
+
+.audifonos-vacio {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.audifonos-lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.audifonos-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.audifonos-lista li:last-child { border-bottom: none; padding-bottom: 0; }
+
+.audifonos-lista span { color: var(--text-muted); }
+
+.audifonos-lista strong {
+  color: var(--neon-cyan);
+  font-size: 15px;
+}

@@ -235,12 +235,23 @@ export default function App() {
       <main className="app-main">
         <div key={tab} className="tab-fade">
           <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
-            {tab === 'dashboard'  && <Dashboard onNavigate={handleDashboardNav} onOpenEquipo={handleOpenEquipo} refresh={refresh} />}
+            {tab === 'dashboard'  && (
+              <Dashboard
+                onNavigate={handleDashboardNav}
+                onOpenEquipo={handleOpenEquipo}
+                refresh={refresh}
+                rol={rol}
+                esGlobal={esGlobal}
+                edificioSel={edificioSel}
+              />
+            )}
             {tab === 'inventario' && (
               <EquiposList
                 refresh={refresh}
                 externalFilters={dashboardFilter}
                 rol={rol}
+                esGlobal={esGlobal}
+                edificioSel={edificioSel}
                 onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
                 onView={(equipo) => setModal({ mode: 'view', equipo })}
                 onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}

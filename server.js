@@ -598,7 +598,7 @@ app.get('/api/edificios', requireRol('admin', 'observador'), async (req, res) =>
     if (req.user.edificio_id != null) {
       return res.status(403).json({ error: 'No tienes permisos para esta acción' });
     }
-    const { rows } = await pool.query('SELECT id, nombre FROM edificios ORDER BY nombre');
+    const { rows } = await pool.query('SELECT id, nombre, audifonos_disponibles FROM edificios ORDER BY nombre');
     res.json(rows);
   } catch (err) {
     error500(res, err);

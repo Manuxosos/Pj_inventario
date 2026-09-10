@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Laptop, Users, Package, AlertCircle } from 'lucide-react';
 import PisoAgentesModal from './PisoAgentesModal';
+import AudifonosCard from './AudifonosCard';
 import { CAMPO_LABEL } from '../campoLabel';
 import './Dashboard.css';
 
@@ -68,7 +69,7 @@ function normRam(raw) {
   return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
-export default function Dashboard({ onNavigate, onOpenEquipo, refresh }) {
+export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGlobal, edificioSel }) {
   const [todos,     setTodos]     = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [actividad, setActividad] = useState([]);
@@ -160,6 +161,8 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh }) {
         <KpiCard value={revision} label="En Revisión"  color="pink"   icon={<AlertCircle size={20}/>}
           onClick={() => nav({ estado: 'En revisión' })} />
       </div>
+
+      <AudifonosCard rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
 
       {/* Fila 1: Estado + Piso + RAM */}
       <div className="dash-row-3">

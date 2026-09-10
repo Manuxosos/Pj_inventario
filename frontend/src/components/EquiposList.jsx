@@ -3,6 +3,7 @@ import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } fr
 import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4 } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
+import AudifonosCard from './AudifonosCard';
 import './EquiposList.css';
 
 const COLUMNAS = [
@@ -47,10 +48,11 @@ function leerGuardado(key) {
   } catch { return null; }
 }
 
-export default function EquiposList({ refresh, externalFilters, rol, onEdit, onView, onCreate, showToast }) {
+export default function EquiposList({ refresh, externalFilters, rol, esGlobal, edificioSel, onEdit, onView, onCreate, showToast }) {
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin = rol === 'admin';
   const puedeExportar = rol === 'admin' || rol === 'observador';
+  const [vista, setVista] = useState('equipos'); // 'equipos' | 'audifonos'
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
@@ -232,8 +234,36 @@ export default function EquiposList({ refresh, externalFilters, rol, onEdit, onV
   // solo según los pisos que realmente existan en los datos de ese edificio.
   const mostrarFiltroPiso = opciones.pisos.length > 1;
 
+  const vistaToggle = (
+    <div className="inventario-vista-toggle">
+      <button
+        className={`inventario-vista-btn ${vista === 'equipos' ? 'active' : ''}`}
+        onClick={() => setVista('equipos')}
+      >
+        Equipos
+      </button>
+      <button
+        className={`inventario-vista-btn ${vista === 'audifonos' ? 'active' : ''}`}
+        onClick={() => setVista('audifonos')}
+      >
+        Audífonos
+      </button>
+    </div>
+  );
+
+  if (vista === 'audifonos') {
+    return (
+      <div>
+        {vistaToggle}
+        <AudifonosCard rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+      </div>
+    );
+  }
+
   return (
     <div>
+      {vistaToggle}
+
       {/* Stats — siempre totales globales */}
       <div className="stats-row">
         <div className="stat-card card">

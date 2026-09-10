@@ -1,3 +1,32 @@
+.inventario-vista-toggle {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.inventario-vista-btn {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.inventario-vista-btn:hover {
+  color: var(--neon-cyan);
+  border-color: rgba(0,245,255,0.2);
+  background: rgba(0,245,255,0.05);
+}
+.inventario-vista-btn.active {
+  color: var(--neon-cyan);
+  border-color: rgba(0,245,255,0.35);
+  background: rgba(0,245,255,0.08);
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(0,245,255,0.15), inset 0 0 12px rgba(0,245,255,0.05);
+}
+
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
