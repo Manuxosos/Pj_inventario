@@ -32,12 +32,6 @@
   flex-shrink: 0;
 }
 
-.agentes-audifonos-valor {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--neon-cyan);
-}
-
 .agentes-capacidad-label {
   font-size: 12px;
   color: var(--text-muted);

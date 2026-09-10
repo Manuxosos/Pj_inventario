@@ -598,7 +598,7 @@ app.get('/api/edificios', requireRol('admin', 'observador'), async (req, res) =>
     if (req.user.edificio_id != null) {
       return res.status(403).json({ error: 'No tienes permisos para esta acción' });
     }
-    const { rows } = await pool.query('SELECT id, nombre, audifonos_disponibles FROM edificios ORDER BY nombre');
+    const { rows } = await pool.query('SELECT id, nombre FROM edificios ORDER BY nombre');
     res.json(rows);
   } catch (err) {
     error500(res, err);
@@ -638,32 +638,97 @@ app.put('/api/edificios/capacidad-mesa', requireRol('admin', 'it'), async (req, 
   }
 });
 
-// GET /api/edificios/audifonos — cuántos audífonos hay disponibles para
-// entregar en el edificio del scope. Cualquier rol puede verlo.
-app.get('/api/edificios/audifonos', async (req, res) => {
+// ── Stock de audífonos (por edificio) ────────────────────────────────────────
+// Cada edificio puede manejar varios modelos/tipos de conexión a la vez, por
+// eso es una lista (audifonos_stock) y no un único número.
+const TIPOS_CONEXION_AUDIFONO = ['bluetooth', 'usb_2.4ghz'];
+
+function validarAudifono(body) {
+  const modelo = (body.modelo || '').trim();
+  if (!modelo) return 'El modelo es obligatorio';
+  if (!TIPOS_CONEXION_AUDIFONO.includes(body.tipo_conexion)) return 'Tipo de conexión inválido';
+  const cantidad = parseInt(body.cantidad);
+  if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad > 9999) {
+    return 'La cantidad debe ser un número entero entre 0 y 9999';
+  }
+  return null;
+}
+
+// GET /api/audifonos — cualquier rol autenticado puede verlo. Con un
+// edificio puntual en el scope devuelve solo sus filas; en alcance global
+// (admin/observador sin ?edificio=) devuelve las de todos los edificios
+// con el nombre del edificio incluido, para agrupar en el frontend.
+app.get('/api/audifonos', async (req, res) => {
   try {
     const scope = scopeEdificio(req);
-    if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
-    const { rows } = await pool.query('SELECT audifonos_disponibles FROM edificios WHERE id = $1', [scope]);
-    if (!rows[0]) return res.status(404).json({ error: 'Edificio no encontrado' });
-    res.json({ audifonos_disponibles: rows[0].audifonos_disponibles });
+    if (scope != null) {
+      const { rows } = await pool.query(
+        'SELECT id, modelo, tipo_conexion, cantidad FROM audifonos_stock WHERE edificio_id = $1 ORDER BY modelo',
+        [scope]
+      );
+      return res.json(rows);
+    }
+    const { rows } = await pool.query(
+      `SELECT a.id, a.edificio_id, e.nombre AS edificio_nombre, a.modelo, a.tipo_conexion, a.cantidad
+       FROM audifonos_stock a
+       JOIN edificios e ON e.id = a.edificio_id
+       ORDER BY e.nombre, a.modelo`
+    );
+    res.json(rows);
   } catch (err) {
     error500(res, err);
   }
 });
 
-// PUT /api/edificios/audifonos — admin e IT actualizan la cantidad
-// disponible del edificio del scope (mismo patrón que capacidad-mesa).
-app.put('/api/edificios/audifonos', requireRol('admin', 'it'), async (req, res) => {
+// POST /api/audifonos — admin e IT agregan un modelo nuevo al edificio del scope
+app.post('/api/audifonos', requireRol('admin', 'it'), async (req, res) => {
   try {
     const scope = scopeEdificio(req);
     if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
-    const cantidad = parseInt(req.body.audifonos_disponibles);
-    if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad > 9999) {
-      return res.status(400).json({ error: 'La cantidad debe ser un número entero entre 0 y 9999' });
+    const error = validarAudifono(req.body);
+    if (error) return res.status(400).json({ error });
+    const { rows } = await pool.query(
+      `INSERT INTO audifonos_stock (edificio_id, modelo, tipo_conexion, cantidad)
+       VALUES ($1,$2,$3,$4) RETURNING id, modelo, tipo_conexion, cantidad`,
+      [scope, req.body.modelo.trim(), req.body.tipo_conexion, parseInt(req.body.cantidad)]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// PUT /api/audifonos/:id — admin e IT editan un modelo existente de su propio edificio
+app.put('/api/audifonos/:id', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { rows: [item] } = await pool.query('SELECT * FROM audifonos_stock WHERE id = $1', [req.params.id]);
+    const scope = scopeEdificio(req);
+    if (!item || (scope != null && item.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
     }
-    await pool.query('UPDATE edificios SET audifonos_disponibles = $1 WHERE id = $2', [cantidad, scope]);
-    res.json({ ok: true, audifonos_disponibles: cantidad });
+    const error = validarAudifono(req.body);
+    if (error) return res.status(400).json({ error });
+    const { rows } = await pool.query(
+      `UPDATE audifonos_stock SET modelo = $1, tipo_conexion = $2, cantidad = $3 WHERE id = $4
+       RETURNING id, modelo, tipo_conexion, cantidad`,
+      [req.body.modelo.trim(), req.body.tipo_conexion, parseInt(req.body.cantidad), req.params.id]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// DELETE /api/audifonos/:id — admin e IT eliminan un modelo de su propio edificio
+app.delete('/api/audifonos/:id', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { rows: [item] } = await pool.query('SELECT * FROM audifonos_stock WHERE id = $1', [req.params.id]);
+    const scope = scopeEdificio(req);
+    if (!item || (scope != null && item.edificio_id !== scope)) {
+      return res.status(404).json({ error: 'No encontrado' });
+    }
+    await pool.query('DELETE FROM audifonos_stock WHERE id = $1', [req.params.id]);
+    res.json({ ok: true });
   } catch (err) {
     error500(res, err);
   }

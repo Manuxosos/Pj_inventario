@@ -73,8 +73,11 @@ export const deleteTarea = (id)       => api.delete(`/tareas/${id}`).then(r => r
 export const getAgentesTablero = ()               => api.get('/agentes/tablero').then(r => r.data);
 export const moverAgente       = (agente, piso, mesa) => api.put('/agentes/mover', { agente, piso, mesa }).then(r => r.data);
 export const setCapacidadMesa  = (capacidad)       => api.put('/edificios/capacidad-mesa', { capacidad }).then(r => r.data);
-export const getAudifonosDisponibles = ()          => api.get('/edificios/audifonos').then(r => r.data);
-export const setAudifonosDisponibles = (cantidad)  => api.put('/edificios/audifonos', { audifonos_disponibles: cantidad }).then(r => r.data);
+// Stock de audífonos (modelo + tipo de conexión + cantidad) por edificio
+export const getAudifonosStock  = ()          => api.get('/audifonos').then(r => r.data);
+export const crearAudifono      = (data)      => api.post('/audifonos', data).then(r => r.data);
+export const actualizarAudifono = (id, data)  => api.put(`/audifonos/${id}`, data).then(r => r.data);
+export const eliminarAudifono   = (id)        => api.delete(`/audifonos/${id}`).then(r => r.data);
 
 // Edificios (Fase 2) — solo cuentas de alcance global (admin, observador global)
 export const getEdificios   = ()     => api.get('/edificios').then(r => r.data);

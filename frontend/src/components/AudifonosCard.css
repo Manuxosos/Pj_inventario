@@ -1,4 +1,4 @@
-.audifonos-card { padding: 18px; max-width: 320px; }
+.audifonos-card { padding: 18px; max-width: 520px; }
 
 .audifonos-card-header {
   display: flex;
@@ -16,26 +16,15 @@
   margin: 0;
 }
 
-.audifonos-valor {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--neon-cyan);
-  text-shadow: 0 0 14px rgba(0,245,255,0.5);
-}
-
-.audifonos-edit {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.audifonos-edit input {
-  width: 90px;
-}
-
 .audifonos-vacio {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.audifonos-error {
+  font-size: 12.5px;
+  color: var(--danger);
+  margin: 6px 0 0;
 }
 
 .audifonos-lista {
@@ -45,20 +34,62 @@
   gap: 8px;
 }
 
-.audifonos-lista li {
+.audifonos-fila {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 10px;
   font-size: 13px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
 
-.audifonos-lista li:last-child { border-bottom: none; padding-bottom: 0; }
+.audifonos-lista .audifonos-fila:last-child { border-bottom: none; padding-bottom: 0; }
 
-.audifonos-lista span { color: var(--text-muted); }
+.audifonos-modelo {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
-.audifonos-lista strong {
+.audifonos-tipo {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.audifonos-cantidad {
+  flex-shrink: 0;
   color: var(--neon-cyan);
   font-size: 15px;
+  min-width: 24px;
+  text-align: right;
+}
+
+.audifonos-acciones {
+  flex-shrink: 0;
+  display: flex;
+  gap: 2px;
+}
+
+.audifonos-fila-edit {
+  flex-wrap: wrap;
+}
+.audifonos-fila-edit .form-input { flex: 1; min-width: 100px; }
+.audifonos-cantidad-input { max-width: 80px; flex: none !important; }
+
+.audifonos-fila-nueva { margin-top: 4px; }
+
+.audifonos-btn-agregar { margin-top: 12px; }
+
+.audifonos-grupo { margin-bottom: 16px; }
+.audifonos-grupo:last-child { margin-bottom: 0; }
+
+.audifonos-grupo-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 8px;
 }

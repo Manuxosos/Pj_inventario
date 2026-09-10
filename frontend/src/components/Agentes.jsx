@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getAgentesTablero, moverAgente, setCapacidadMesa, getAudifonosDisponibles, setAudifonosDisponibles } from '../api';
+import { getAgentesTablero, moverAgente, setCapacidadMesa } from '../api';
 import AgenteInfoModal from './AgenteInfoModal';
 import { colorAgente } from '../agenteColor';
 import './Agentes.css';
@@ -53,9 +53,6 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, onGoToInventa
   const [capacidad, setCapacidad] = useState(7);
   const [capacidadInput, setCapacidadInput] = useState('7');
   const [guardandoCapacidad, setGuardandoCapacidad] = useState(false);
-  const [audifonos, setAudifonos] = useState(0);
-  const [audifonosInput, setAudifonosInput] = useState('0');
-  const [guardandoAudifonos, setGuardandoAudifonos] = useState(false);
 
   const cargar = () => {
     getAgentesTablero().then(d => {
@@ -78,27 +75,6 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, onGoToInventa
       cargar();
     } finally {
       setGuardandoCapacidad(false);
-    }
-  };
-
-  const cargarAudifonos = () => {
-    getAudifonosDisponibles().then(d => {
-      setAudifonos(d.audifonos_disponibles ?? 0);
-      setAudifonosInput(String(d.audifonos_disponibles ?? 0));
-    }).catch(() => {});
-  };
-
-  useEffect(() => { cargarAudifonos(); }, [refresh]);
-
-  const handleGuardarAudifonos = async () => {
-    const n = parseInt(audifonosInput);
-    if (!Number.isInteger(n) || n < 0 || n > 9999) return;
-    setGuardandoAudifonos(true);
-    try {
-      await setAudifonosDisponibles(n);
-      cargarAudifonos();
-    } finally {
-      setGuardandoAudifonos(false);
     }
   };
 
@@ -173,30 +149,6 @@ export default function Agentes({ rol, onOpenEquipo, onEditEquipo, onGoToInventa
               </button>
             </div>
           )}
-          <div className="agentes-capacidad">
-            <label className="agentes-capacidad-label">Audífonos disponibles</label>
-            {puedeMover ? (
-              <>
-                <input
-                  type="number"
-                  min="0"
-                  max="9999"
-                  className="agentes-capacidad-input"
-                  value={audifonosInput}
-                  onChange={e => setAudifonosInput(e.target.value)}
-                />
-                <button
-                  className="btn btn-secondary agentes-capacidad-btn"
-                  onClick={handleGuardarAudifonos}
-                  disabled={guardandoAudifonos || parseInt(audifonosInput) === audifonos}
-                >
-                  {guardandoAudifonos ? 'Guardando...' : 'Guardar'}
-                </button>
-              </>
-            ) : (
-              <span className="agentes-audifonos-valor">{audifonos}</span>
-            )}
-          </div>
         </div>
       </div>
 
