@@ -18,11 +18,24 @@
 
 .agentes-sub { font-size: 13px; color: var(--text-muted); }
 
+.agentes-header-controles {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
 .agentes-capacidad {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.agentes-audifonos-valor {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--neon-cyan);
 }
 
 .agentes-capacidad-label {

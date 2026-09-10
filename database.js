@@ -161,6 +161,10 @@ async function initSchema() {
   // su propia distribución física).
   await pool.query(`ALTER TABLE edificios ADD COLUMN IF NOT EXISTS capacidad_mesa INTEGER NOT NULL DEFAULT 7`);
 
+  // Cuántos audífonos hay disponibles para entregar en cada edificio. Lo
+  // actualizan a mano admin/IT a medida que reciben o entregan unidades.
+  await pool.query(`ALTER TABLE edificios ADD COLUMN IF NOT EXISTS audifonos_disponibles INTEGER NOT NULL DEFAULT 0`);
+
   // El nombre de un agente puede repetirse entre distintos edificios: el
   // identificador único pasa de ser solo agente_key a (agente_key, edificio_id).
   await pool.query(`

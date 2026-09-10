@@ -638,6 +638,37 @@ app.put('/api/edificios/capacidad-mesa', requireRol('admin', 'it'), async (req, 
   }
 });
 
+// GET /api/edificios/audifonos — cuántos audífonos hay disponibles para
+// entregar en el edificio del scope. Cualquier rol puede verlo.
+app.get('/api/edificios/audifonos', async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
+    const { rows } = await pool.query('SELECT audifonos_disponibles FROM edificios WHERE id = $1', [scope]);
+    if (!rows[0]) return res.status(404).json({ error: 'Edificio no encontrado' });
+    res.json({ audifonos_disponibles: rows[0].audifonos_disponibles });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// PUT /api/edificios/audifonos — admin e IT actualizan la cantidad
+// disponible del edificio del scope (mismo patrón que capacidad-mesa).
+app.put('/api/edificios/audifonos', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    if (scope == null) return res.status(400).json({ error: 'Debe seleccionar un edificio' });
+    const cantidad = parseInt(req.body.audifonos_disponibles);
+    if (!Number.isInteger(cantidad) || cantidad < 0 || cantidad > 9999) {
+      return res.status(400).json({ error: 'La cantidad debe ser un número entero entre 0 y 9999' });
+    }
+    await pool.query('UPDATE edificios SET audifonos_disponibles = $1 WHERE id = $2', [cantidad, scope]);
+    res.json({ ok: true, audifonos_disponibles: cantidad });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
 // ── Gestión de usuarios (solo admin) ─────────────────────────────────────────
 app.get('/api/usuarios', requireRol('admin'), async (req, res) => {
   try {
