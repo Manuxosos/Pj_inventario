@@ -4,9 +4,10 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import { Laptop, Users, Package, AlertCircle } from 'lucide-react';
+import { Laptop, Users, Package, AlertCircle, Headphones, Monitor, Smartphone } from 'lucide-react';
 import PisoAgentesModal from './PisoAgentesModal';
-import AudifonosCard from './AudifonosCard';
+import AccesorioCard from './AccesorioCard';
+import { AUDIFONO_TIPOS } from '../accesorioConfig';
 import { CAMPO_LABEL } from '../campoLabel';
 import './Dashboard.css';
 
@@ -162,7 +163,14 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
           onClick={() => nav({ estado: 'En revisión' })} />
       </div>
 
-      <AudifonosCard rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+      <div className="accesorios-row">
+        <AccesorioCard categoria="audifonos" titulo="Audífonos disponibles" Icono={Headphones}
+          atributoOptions={AUDIFONO_TIPOS} rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+        <AccesorioCard categoria="monitores" titulo="Monitores disponibles" Icono={Monitor}
+          rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+        <AccesorioCard categoria="celulares" titulo="Celulares disponibles" Icono={Smartphone}
+          rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+      </div>
 
       {/* Fila 1: Estado + Piso + RAM */}
       <div className="dash-row-3">

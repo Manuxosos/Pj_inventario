@@ -1,6 +1,6 @@
-.audifonos-card { padding: 18px; max-width: 520px; }
+.accesorio-card { padding: 18px; max-width: 520px; }
 
-.audifonos-card-header {
+.accesorio-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -8,7 +8,7 @@
   margin-bottom: 14px;
 }
 
-.audifonos-card-header h3 {
+.accesorio-card-header h3 {
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
@@ -16,25 +16,25 @@
   margin: 0;
 }
 
-.audifonos-vacio {
+.accesorio-vacio {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.audifonos-error {
+.accesorio-error {
   font-size: 12.5px;
   color: var(--danger);
   margin: 6px 0 0;
 }
 
-.audifonos-lista {
+.accesorio-lista {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.audifonos-fila {
+.accesorio-fila {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -43,22 +43,22 @@
   border-bottom: 1px solid var(--border);
 }
 
-.audifonos-lista .audifonos-fila:last-child { border-bottom: none; padding-bottom: 0; }
+.accesorio-lista .accesorio-fila:last-child { border-bottom: none; padding-bottom: 0; }
 
-.audifonos-modelo {
+.accesorio-modelo {
   flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.audifonos-tipo {
+.accesorio-atributo {
   flex-shrink: 0;
   color: var(--text-muted);
   font-size: 12px;
   white-space: nowrap;
 }
 
-.audifonos-cantidad {
+.accesorio-cantidad {
   flex-shrink: 0;
   color: var(--neon-cyan);
   font-size: 15px;
@@ -66,26 +66,26 @@
   text-align: right;
 }
 
-.audifonos-acciones {
+.accesorio-acciones {
   flex-shrink: 0;
   display: flex;
   gap: 2px;
 }
 
-.audifonos-fila-edit {
+.accesorio-fila-edit {
   flex-wrap: wrap;
 }
-.audifonos-fila-edit .form-input { flex: 1; min-width: 100px; }
-.audifonos-cantidad-input { max-width: 80px; flex: none !important; }
+.accesorio-fila-edit .form-input { flex: 1; min-width: 100px; }
+.accesorio-cantidad-input { max-width: 80px; flex: none !important; }
 
-.audifonos-fila-nueva { margin-top: 4px; }
+.accesorio-fila-nueva { margin-top: 4px; }
 
-.audifonos-btn-agregar { margin-top: 12px; }
+.accesorio-btn-agregar { margin-top: 12px; }
 
-.audifonos-grupo { margin-bottom: 16px; }
-.audifonos-grupo:last-child { margin-bottom: 0; }
+.accesorio-grupo { margin-bottom: 16px; }
+.accesorio-grupo:last-child { margin-bottom: 0; }
 
-.audifonos-grupo-titulo {
+.accesorio-grupo-titulo {
   font-size: 12px;
   font-weight: 700;
   color: var(--neon-cyan);

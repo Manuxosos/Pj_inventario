@@ -74,6 +74,13 @@
 .kpi-pink::before { background: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); }
 .kpi-pink:hover { box-shadow: 0 0 30px rgba(255,61,127,0.2); }
 
+/* Tarjetas de stock de accesorios (audífonos, monitores, celulares) */
+.accesorios-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
 /* Charts grid */
 .dash-row-3 {
   display: grid;

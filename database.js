@@ -161,20 +161,42 @@ async function initSchema() {
   // su propia distribución física).
   await pool.query(`ALTER TABLE edificios ADD COLUMN IF NOT EXISTS capacidad_mesa INTEGER NOT NULL DEFAULT 7`);
 
-  // Stock de audífonos disponibles para entregar, por edificio. Cada fila es
-  // un modelo/tipo de conexión distinto (un edificio puede tener varios a la
-  // vez); la cantidad la actualizan a mano admin/IT según reciben o entregan.
+  // Stock de accesorios disponibles para entregar, por edificio: audífonos,
+  // monitores y celulares. Cada fila es un modelo distinto (un edificio
+  // puede tener varios a la vez); la cantidad la actualizan a mano admin/IT
+  // según reciben o entregan. "atributo" solo se usa en audífonos (tipo de
+  // conexión); en monitores/celulares queda vacío.
   await pool.query(`ALTER TABLE edificios DROP COLUMN IF EXISTS audifonos_disponibles`);
+  {
+    // Si ya existía la tabla vieja (solo audífonos), la migramos preservando
+    // los datos en vez de recrearla desde cero.
+    const { rows: oldTable } = await pool.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'audifonos_stock'`
+    );
+    const { rows: newTable } = await pool.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'accesorios_stock'`
+    );
+    if (oldTable.length > 0 && newTable.length === 0) {
+      await pool.query(`ALTER TABLE audifonos_stock RENAME TO accesorios_stock`);
+      await pool.query(`ALTER TABLE accesorios_stock RENAME COLUMN tipo_conexion TO atributo`);
+      await pool.query(`ALTER TABLE accesorios_stock ALTER COLUMN atributo DROP NOT NULL`);
+      await pool.query(`ALTER TABLE accesorios_stock DROP CONSTRAINT IF EXISTS audifonos_stock_tipo_conexion_check`);
+      await pool.query(`ALTER TABLE accesorios_stock ADD COLUMN IF NOT EXISTS categoria TEXT NOT NULL DEFAULT 'audifonos'`);
+    }
+  }
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS audifonos_stock (
+    CREATE TABLE IF NOT EXISTS accesorios_stock (
       id            SERIAL PRIMARY KEY,
       edificio_id   INTEGER NOT NULL REFERENCES edificios(id) ON DELETE CASCADE,
+      categoria     TEXT NOT NULL DEFAULT 'audifonos',
       modelo        TEXT NOT NULL,
-      tipo_conexion TEXT NOT NULL CHECK (tipo_conexion IN ('bluetooth', 'usb_2.4ghz')),
+      atributo      TEXT,
       cantidad      INTEGER NOT NULL DEFAULT 0 CHECK (cantidad >= 0),
       created_at    TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE accesorios_stock DROP CONSTRAINT IF EXISTS accesorios_stock_categoria_check`);
+  await pool.query(`ALTER TABLE accesorios_stock ADD CONSTRAINT accesorios_stock_categoria_check CHECK (categoria IN ('audifonos','monitores','celulares'))`);
 
   // El nombre de un agente puede repetirse entre distintos edificios: el
   // identificador único pasa de ser solo agente_key a (agente_key, edificio_id).

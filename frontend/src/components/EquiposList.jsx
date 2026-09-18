@@ -1,10 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4 } from 'lucide-react';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4, Headphones, Monitor, Smartphone } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
-import AudifonosCard from './AudifonosCard';
+import AccesorioCard from './AccesorioCard';
+import { AUDIFONO_TIPOS } from '../accesorioConfig';
 import './EquiposList.css';
+
+const VISTAS_ACCESORIO = {
+  audifonos: { titulo: 'Audífonos disponibles', Icono: Headphones, atributoOptions: AUDIFONO_TIPOS },
+  monitores: { titulo: 'Monitores disponibles', Icono: Monitor },
+  celulares: { titulo: 'Celulares disponibles', Icono: Smartphone },
+};
 
 const COLUMNAS = [
   { key: 'id_activo',    label: 'ID Activo' },
@@ -52,7 +59,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
   const puedeEditar = rol === 'admin' || rol === 'it';
   const esAdmin = rol === 'admin';
   const puedeExportar = rol === 'admin' || rol === 'observador';
-  const [vista, setVista] = useState('equipos'); // 'equipos' | 'audifonos'
+  const [vista, setVista] = useState('equipos'); // 'equipos' | 'audifonos' | 'monitores' | 'celulares'
   const [equipos, setEquipos] = useState([]);
   const [todos, setTodos] = useState([]);
   const [opciones, setOpciones] = useState({ pisos: [] });
@@ -242,20 +249,25 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
       >
         Equipos
       </button>
-      <button
-        className={`inventario-vista-btn ${vista === 'audifonos' ? 'active' : ''}`}
-        onClick={() => setVista('audifonos')}
-      >
-        Audífonos
-      </button>
+      {Object.entries(VISTAS_ACCESORIO).map(([key, { titulo }]) => (
+        <button
+          key={key}
+          className={`inventario-vista-btn ${vista === key ? 'active' : ''}`}
+          onClick={() => setVista(key)}
+        >
+          {titulo.replace(' disponibles', '')}
+        </button>
+      ))}
     </div>
   );
 
-  if (vista === 'audifonos') {
+  if (vista !== 'equipos') {
+    const { titulo, Icono, atributoOptions } = VISTAS_ACCESORIO[vista];
     return (
       <div>
         {vistaToggle}
-        <AudifonosCard rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
+        <AccesorioCard categoria={vista} titulo={titulo} Icono={Icono} atributoOptions={atributoOptions}
+          rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
       </div>
     );
   }
