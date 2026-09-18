@@ -266,7 +266,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
     return (
       <div>
         {vistaToggle}
-        <AccesorioCard categoria={vista} titulo={titulo} Icono={Icono} atributoOptions={atributoOptions}
+        <AccesorioCard key={vista} categoria={vista} titulo={titulo} Icono={Icono} atributoOptions={atributoOptions}
           rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
       </div>
     );
