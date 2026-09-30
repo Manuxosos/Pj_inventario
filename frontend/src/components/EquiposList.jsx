@@ -300,12 +300,6 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
           <span className="stat-num">{deBaja}</span>
           <span className="stat-label">De Baja</span>
         </div>
-        {mostrarFiltroPiso && (
-          <div className="stat-card card">
-            <span className="stat-num">{opciones.pisos.length}</span>
-            <span className="stat-label">Pisos</span>
-          </div>
-        )}
       </div>
 
       {/* Filters */}
