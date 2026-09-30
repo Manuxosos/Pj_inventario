@@ -278,25 +278,40 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
     <div>
       {vistaToggle}
 
-      {/* Stats — siempre totales globales */}
+      {/* Stats — siempre totales globales. Click filtra la tabla por estado. */}
       <div className="stats-row">
-        <div className="stat-card card">
+        <div
+          className={`stat-card card stat-card-clickable ${!filters.estado ? 'stat-card-active' : ''}`}
+          onClick={() => setFilters(f => ({ ...f, estado: '', estadoIn: '' }))}
+        >
           <span className="stat-num">{todos.length}</span>
           <span className="stat-label">Total Equipos</span>
         </div>
-        <div className="stat-card card">
+        <div
+          className={`stat-card card stat-card-clickable ${filters.estado === 'En uso' ? 'stat-card-active' : ''}`}
+          onClick={() => setFilters(f => ({ ...f, estado: 'En uso', estadoIn: '' }))}
+        >
           <span className="stat-num">{enUso}</span>
           <span className="stat-label">En Uso</span>
         </div>
-        <div className="stat-card card">
+        <div
+          className={`stat-card card stat-card-clickable ${filters.estado === 'Disponible' ? 'stat-card-active' : ''}`}
+          onClick={() => setFilters(f => ({ ...f, estado: 'Disponible', estadoIn: '' }))}
+        >
           <span className="stat-num">{enBodega}</span>
           <span className="stat-label">Disponibles</span>
         </div>
-        <div className="stat-card card">
+        <div
+          className={`stat-card card stat-card-clickable ${filters.estado === 'En revisión' ? 'stat-card-active' : ''}`}
+          onClick={() => setFilters(f => ({ ...f, estado: 'En revisión', estadoIn: '' }))}
+        >
           <span className="stat-num">{enRevision}</span>
           <span className="stat-label">En Revisión</span>
         </div>
-        <div className="stat-card card">
+        <div
+          className={`stat-card card stat-card-clickable ${filters.estado === 'De baja' ? 'stat-card-active' : ''}`}
+          onClick={() => setFilters(f => ({ ...f, estado: 'De baja', estadoIn: '' }))}
+        >
           <span className="stat-num">{deBaja}</span>
           <span className="stat-label">De Baja</span>
         </div>

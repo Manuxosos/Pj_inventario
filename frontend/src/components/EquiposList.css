@@ -43,6 +43,19 @@
   gap: 4px;
 }
 
+.stat-card-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.stat-card-clickable:hover {
+  border-color: rgba(0,245,255,0.3);
+  transform: translateY(-1px);
+}
+.stat-card-active {
+  border-color: rgba(0,245,255,0.5);
+  box-shadow: 0 0 16px rgba(0,245,255,0.15), inset 0 0 16px rgba(0,245,255,0.05);
+}
+
 .stat-num { font-size: 32px; font-weight: 800; color: var(--neon-cyan); line-height: 1; text-shadow: 0 0 14px rgba(0,245,255,0.5); }
 .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
 
