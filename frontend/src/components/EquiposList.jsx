@@ -235,8 +235,10 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
   };
 
   const hayFiltrosActivos = Object.values(filters).some(Boolean);
-  const enUso   = todos.filter(e => e.estado === 'En uso').length;
-  const enBodega = todos.filter(e => e.piso === 'BODEGA' || e.estado === 'Disponible').length;
+  const enUso      = todos.filter(e => e.estado === 'En uso').length;
+  const enBodega   = todos.filter(e => e.piso === 'BODEGA' || e.estado === 'Disponible').length;
+  const enRevision = todos.filter(e => e.estado === 'En revisión').length;
+  const deBaja     = todos.filter(e => e.estado === 'De baja').length;
   // Edificios de un solo piso (más bodega) no necesitan el filtro — se detecta
   // solo según los pisos que realmente existan en los datos de ese edificio.
   const mostrarFiltroPiso = opciones.pisos.length > 1;
@@ -288,7 +290,15 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
         </div>
         <div className="stat-card card">
           <span className="stat-num">{enBodega}</span>
-          <span className="stat-label">En Bodega</span>
+          <span className="stat-label">Disponibles</span>
+        </div>
+        <div className="stat-card card">
+          <span className="stat-num">{enRevision}</span>
+          <span className="stat-label">En Revisión</span>
+        </div>
+        <div className="stat-card card">
+          <span className="stat-num">{deBaja}</span>
+          <span className="stat-label">De Baja</span>
         </div>
         {mostrarFiltroPiso && (
           <div className="stat-card card">
