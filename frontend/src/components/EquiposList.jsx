@@ -236,7 +236,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
 
   const hayFiltrosActivos = Object.values(filters).some(Boolean);
   const enUso      = todos.filter(e => e.estado === 'En uso').length;
-  const enBodega   = todos.filter(e => e.piso === 'BODEGA' || e.estado === 'Disponible').length;
+  const disponibles = todos.filter(e => e.estado === 'Disponible').length;
   const enRevision = todos.filter(e => e.estado === 'En revisión').length;
   const deBaja     = todos.filter(e => e.estado === 'De baja').length;
   // Edificios de un solo piso (más bodega) no necesitan el filtro — se detecta
@@ -298,7 +298,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
           className={`stat-card card stat-card-clickable ${filters.estado === 'Disponible' ? 'stat-card-active' : ''}`}
           onClick={() => setFilters(f => ({ ...f, estado: 'Disponible', estadoIn: '' }))}
         >
-          <span className="stat-num">{enBodega}</span>
+          <span className="stat-num">{disponibles}</span>
           <span className="stat-label">Disponibles</span>
         </div>
         <div
