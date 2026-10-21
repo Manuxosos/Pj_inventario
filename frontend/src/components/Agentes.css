@@ -9,14 +9,14 @@
 }
 
 .agentes-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--neon-cyan);
   margin: 0 0 4px;
   text-shadow: 0 0 12px rgba(0,245,255,0.35);
 }
 
-.agentes-sub { font-size: 13px; color: var(--text-muted); }
+.agentes-sub { font-size: 14px; color: var(--text-muted); margin-bottom: 10px; }
 
 .agentes-header-controles {
   display: flex;
@@ -33,7 +33,7 @@
 }
 
 .agentes-capacidad-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -41,7 +41,7 @@
 .agentes-capacidad-input {
   width: 56px;
   padding: 6px 8px;
-  font-size: 13px;
+  font-size: 14px;
   text-align: center;
   border-radius: var(--radius);
   border: 1px solid var(--border);
@@ -49,7 +49,7 @@
   color: var(--text);
 }
 
-.agentes-capacidad-btn { padding: 6px 12px; font-size: 12.5px; }
+.agentes-capacidad-btn { padding: 6px 12px; font-size: 13.5px; }
 
 .agentes-pisos {
   display: grid;
@@ -61,7 +61,10 @@
 .agentes-piso-card { padding: 18px 18px 20px; }
 
 .agentes-piso-title {
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--neon-cyan);
   text-transform: uppercase;
@@ -82,7 +85,7 @@
 .mesa-bloque { display: flex; flex-direction: column; gap: 6px; }
 
 .mesa-label {
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -112,7 +115,7 @@
 }
 
 .mesa-vacia {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   opacity: 0.6;
   text-align: center;
@@ -164,11 +167,11 @@
    duración y arrancan sin desfase, por eso laten al unísono */
 @keyframes asiento-resplandor {
   0%, 100% {
-    box-shadow: 0 0 8px var(--agente-glow, rgba(0,245,255,0.35));
+    box-shadow: 0 0 6px color-mix(in srgb, var(--agente-color) 35%, transparent);
   }
   50% {
-    box-shadow: 0 0 18px var(--agente-color, var(--neon-cyan)),
-                0 0 32px var(--agente-glow, rgba(0,245,255,0.3));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--agente-color) 70%, transparent),
+                0 0 26px color-mix(in srgb, var(--agente-color) 25%, transparent);
   }
 }
 
@@ -178,8 +181,9 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 2px solid transparent;
+  border: 2px solid var(--agente-color);
   padding: 2px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,17 +198,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
-  background: var(--agente-color, var(--neon-cyan));
-  color: #00131a;
+  background: color-mix(in srgb, var(--agente-color) 22%, var(--surface));
+  color: var(--agente-color);
   flex-shrink: 0;
   transition: box-shadow 0.15s;
   animation: asiento-resplandor 2.4s ease-in-out infinite;
 }
 
+/* Icono del estado en la esquina del asiento: el estado se lee aunque no
+   se distinga el color */
+.asiento-estado {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--agente-color);
+  color: var(--agente-color);
+}
+
 .asiento-nombre {
-  font-size: 9.5px;
+  font-size: 10.5px;
   color: var(--text-muted);
   text-align: center;
   line-height: 1.15;
@@ -231,7 +252,7 @@
 }
 .asiento-dragging .asiento-avatar {
   animation-play-state: paused;
-  box-shadow: 0 0 4px var(--agente-glow, rgba(0,245,255,0.2));
+  box-shadow: 0 0 4px color-mix(in srgb, var(--agente-color) 25%, transparent);
 }
 
 .agentes-moviendo {
@@ -244,6 +265,70 @@
   color: var(--neon-cyan);
   padding: 10px 18px;
   border-radius: 8px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+
+/* ── Vista de edificios ───────────────────────────────────────────────── */
+.edificios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.edificio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 16px 16px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: center;
+  animation: edificio-entrada var(--dur-lenta) var(--ease-out) both;
+  animation-delay: calc(var(--i) * 70ms);
+  transition: transform var(--dur-rapida) var(--ease-out), border-color var(--dur-media) var(--ease-out), box-shadow var(--dur-media) var(--ease-out);
+}
+.edificio-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(0, 245, 255, 0.35);
+  box-shadow: var(--glass-shadow), 0 0 30px rgba(0, 245, 255, 0.12);
+}
+.edificio-card:focus-visible { outline: 2px solid var(--neon-cyan); outline-offset: 3px; }
+.edificio-card-abierta { opacity: 0.4; }
+
+.edificio-escena {
+  display: block;
+  perspective: 600px;
+  animation: edificio-flotar 6s ease-in-out infinite;
+  animation-delay: calc(var(--i) * -1.3s);
+}
+.edificio-card:hover .edificio-escena { animation-play-state: paused; }
+
+.edificio-nombre {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.edificio-datos {
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.edificio-datos span { display: inline-flex; align-items: center; gap: 5px; }
+
+@keyframes edificio-entrada {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes edificio-flotar {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .edificio-card, .edificio-escena { animation: none; }
 }

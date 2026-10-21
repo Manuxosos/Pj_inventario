@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Laptop, Eye, Pencil } from 'lucide-react';
+import { EstadoBadge } from './Etiquetas';
 import { getEquipos } from '../api';
 import { colorAgente } from '../agenteColor';
 import './AgenteInfoModal.css';
@@ -8,12 +9,6 @@ function iniciales(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
 }
 
-const ESTADO_BADGE = {
-  'En uso':      'badge-blue',
-  'Disponible':  'badge-green',
-  'En revisión': 'badge-yellow',
-  'De baja':     'badge-red',
-};
 
 export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEquipo, onEditEquipo }) {
   const [equipos, setEquipos] = useState([]);
@@ -23,7 +18,7 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
     getEquipos({ responsable: nombre }).then(d => { setEquipos(d); setLoading(false); });
   }, [nombre]);
 
-  const color = colorAgente(nombre);
+  const color = colorAgente();
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -44,9 +39,9 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
         <div className="modal-body">
           <h3 className="section-title">Equipos asignados</h3>
           {loading ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cargando...</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Cargando...</p>
           ) : equipos.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>No tiene equipos asignados.</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No tiene equipos asignados.</p>
           ) : (
             <div className="agente-info-equipos">
               {equipos.map(eq => (
@@ -57,7 +52,7 @@ export default function AgenteInfoModal({ nombre, piso, mesa, onClose, onOpenEqu
                     <span className="agente-info-equipo-serie">NS: {eq.numero_serie || '—'} · ID: {eq.id_activo || '—'}</span>
                   </div>
                   {eq.estado && (
-                    <span className={`badge ${ESTADO_BADGE[eq.estado] || 'badge-gray'}`}>{eq.estado}</span>
+                    <EstadoBadge estado={eq.estado} />
                   )}
                   <div className="agente-info-equipo-acciones">
                     <button

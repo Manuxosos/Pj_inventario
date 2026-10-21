@@ -16,7 +16,8 @@ api.interceptors.request.use(cfg => {
   const token = localStorage.getItem('token');
   if (token) cfg.headers['Authorization'] = `Bearer ${token}`;
   if (edificioActivo != null) {
-    cfg.params = { ...(cfg.params || {}), edificio: edificioActivo };
+    // Un ?edificio= explícito de la llamada gana sobre el edificio activo
+    cfg.params = { edificio: edificioActivo, ...(cfg.params || {}) };
   }
   return cfg;
 });
@@ -70,9 +71,14 @@ export const updateTarea = (id, data) => api.put(`/tareas/${id}`, data).then(r =
 export const deleteTarea = (id)       => api.delete(`/tareas/${id}`).then(r => r.data);
 
 // Tablero de agentes por piso/mesa
-export const getAgentesTablero = ()               => api.get('/agentes/tablero').then(r => r.data);
-export const moverAgente       = (agente, piso, mesa) => api.put('/agentes/mover', { agente, piso, mesa }).then(r => r.data);
-export const setCapacidadMesa  = (capacidad)       => api.put('/edificios/capacidad-mesa', { capacidad }).then(r => r.data);
+// `edificio` (opcional) fija el edificio de la consulta; sin él se usa el activo.
+const conEdificio = (edificio) => (edificio != null ? { params: { edificio } } : undefined);
+export const getAgentesTablero = (edificio)        => api.get('/agentes/tablero', conEdificio(edificio)).then(r => r.data);
+export const moverAgente       = (agente, piso, mesa, edificio) => api.put('/agentes/mover', { agente, piso, mesa }, conEdificio(edificio)).then(r => r.data);
+export const setCapacidadMesa  = (capacidad, edificio) => api.put('/edificios/capacidad-mesa', { capacidad }, conEdificio(edificio)).then(r => r.data);
+// Resumen de edificios (pisos y agentes) y traslado/intercambio entre edificios
+export const getAgentesEdificios = ()              => api.get('/agentes/edificios').then(r => r.data);
+export const trasladarAgente   = (datos)           => api.put('/agentes/trasladar', datos).then(r => r.data);
 // Stock de accesorios (audífonos, monitores, celulares) por edificio
 export const getAccesorios      = (categoria) => api.get('/accesorios', { params: { categoria } }).then(r => r.data);
 export const crearAccesorio     = (data)      => api.post('/accesorios', data).then(r => r.data);

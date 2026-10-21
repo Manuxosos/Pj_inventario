@@ -227,7 +227,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
             <section className="form-section">
               <h3 className="section-title">Historial de cambios</h3>
               {historial.length === 0 ? (
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', padding: '8px 0' }}>Sin cambios registrados.</p>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin cambios registrados.</p>
               ) : (
                 <div className="historial-list">
                   {historial.map(h => (
@@ -243,7 +243,7 @@ export default function EquipoModal({ mode, equipo, rol, onClose, onSaved }) {
                           <span className="historial-nuevo">{h.valor_nuevo || '—'}</span>
                         </div>
                       ) : (
-                        <span className="historial-nuevo" style={{ fontSize: 12 }}>{h.valor_nuevo}</span>
+                        <span className="historial-nuevo" style={{ fontSize: 13 }}>{h.valor_nuevo}</span>
                       )}
                       <div className="historial-footer">
                         <span className="historial-usuario">por {h.usuario_nombre}</span>

@@ -9,14 +9,14 @@
 }
 
 .usuarios-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--neon-cyan);
   margin: 0 0 4px;
   text-shadow: 0 0 12px rgba(0,245,255,0.35);
 }
 
-.usuarios-sub { font-size: 13px; color: var(--text-muted); }
+.usuarios-sub { font-size: 14px; color: var(--text-muted); }
 
 /* ── Rol badges ── */
 .rol-badge {
@@ -25,7 +25,7 @@
   gap: 4px;
   padding: 2px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -43,9 +43,9 @@
 }
 
 .rol-obs {
-  background: rgba(255,184,0,0.12);
-  color: var(--neon-amber);
-  border: 1px solid rgba(255,184,0,0.25);
+  background: rgba(90,143,179,0.12);
+  color: var(--text-muted);
+  border: 1px solid rgba(90,143,179,0.3);
 }
 
 /* ── Active/Inactive badges ── */
@@ -55,7 +55,7 @@
   border: 1px solid rgba(0,255,157,0.25);
   padding: 2px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -65,7 +65,7 @@
   border: 1px solid rgba(255,61,127,0.25);
   padding: 2px 10px;
   border-radius: 20px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
 }
 
@@ -74,6 +74,6 @@
   text-align: center;
   padding: 48px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: 16px;
 }
 

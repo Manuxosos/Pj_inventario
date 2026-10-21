@@ -62,7 +62,7 @@ export default function PapeleraModal({ onClose, onCambio, showToast }) {
 
         <div className="modal-body">
           {loading ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cargando...</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Cargando...</p>
           ) : equipos.length === 0 ? (
             <p className="papelera-vacia">La papelera está vacía.</p>
           ) : (

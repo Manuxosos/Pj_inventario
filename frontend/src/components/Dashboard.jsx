@@ -4,32 +4,19 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from 'recharts';
-import { Laptop, Users, Package, AlertCircle, Headphones, Monitor, Smartphone } from 'lucide-react';
+import { Laptop, Headphones, Monitor, Smartphone, ArrowRight } from 'lucide-react';
 import PisoAgentesModal from './PisoAgentesModal';
 import AccesorioCard from './AccesorioCard';
 import { AUDIFONO_TIPOS } from '../accesorioConfig';
 import { CAMPO_LABEL } from '../campoLabel';
+import { metaEstado, grupoRam, ordenRam, coloresRam, CAMPO_ICON } from '../semantica';
+import { EstadoBadge, GrupoChip } from './Etiquetas';
 import './Dashboard.css';
 
-const C = {
-  cyan:   '#00e5ff',
-  green:  '#00e676',
-  amber:  '#ffca28',
-  purple: '#ce93d8',
-  pink:   '#f48fb1',
-  blue:   '#82b1ff',
-  orange: '#ffab40',
-};
-
-const ESTADO_COLORS = {
-  'En uso':      C.cyan,
-  'Disponible':  C.green,
-  'En revisión': C.amber,
-  'De baja':     C.pink,
-  'Sin estado':  '#334155',
-};
-
-const CHART_COLORS = [C.cyan, C.green, C.amber, C.purple, C.pink, C.blue, C.orange];
+// Gráficos de una sola serie (equipos por piso, por modelo) usan un solo
+// color: el cian de la marca. Pintar cada barra distinto sugería categorías
+// con significado propio y chocaba con los colores de estado.
+const COLOR_DATO = '#00e5ff';
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -37,7 +24,8 @@ const CustomTooltip = ({ active, payload, label }) => {
     <div className="chart-tooltip">
       {label && <p className="tooltip-label">{label}</p>}
       {payload.map((p, i) => (
-        <p key={i} style={{ color: p.fill || p.color }}>
+        <p key={i}>
+          <span className="legend-dot" style={{ background: p.payload?.fill || p.fill || p.color }} />
           {p.name}: <strong>{p.value}</strong>
         </p>
       ))}
@@ -61,13 +49,6 @@ function fmtDate(iso) {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });
-}
-
-// Normaliza RAM: elimina todos los espacios y pone en mayúsculas
-// "8 GB" y "8GB" y "8gb" → "8GB"
-function normRam(raw) {
-  if (!raw) return '';
-  return raw.trim().replace(/\s+/g, '').toUpperCase();
 }
 
 export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGlobal, edificioSel }) {
@@ -104,16 +85,6 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
   const lista    = count(e => e.estado === 'Disponible');
   const revision = count(e => e.estado === 'En revisión');
 
-  // Estados
-  const byEstado = Object.entries(
-    todos.reduce((acc, e) => {
-      const k = e.estado || 'Sin estado';
-      acc[k] = (acc[k] || 0) + 1;
-      return acc;
-    }, {})
-  ).map(([name, value]) => ({ name, value }))
-   .sort((a, b) => b.value - a.value);
-
   // Pisos
   const byPiso = Object.entries(
     todos.reduce((acc, e) => {
@@ -135,16 +106,17 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
    .sort((a, b) => b.total - a.total)
    .slice(0, 8);
 
-  // RAM — normalizada para evitar duplicados por espacios/capitalización
+  // RAM — agrupada por capacidad real y ordenada de menor a mayor. Es una
+  // magnitud, así que usa una escala de un solo tono (más RAM = más brillo).
   const ramMap = {};
   for (const e of todos) {
-    const k = normRam(e.ram);
+    const k = grupoRam(e.ram);
     if (!k) continue;
     ramMap[k] = (ramMap[k] || 0) + 1;
   }
-  const byRam = Object.entries(ramMap)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  const ramGrupos = Object.keys(ramMap).sort((a, b) => ordenRam(a) - ordenRam(b));
+  const ramColor = coloresRam(ramGrupos);
+  const byRam = ramGrupos.map(name => ({ name, value: ramMap[name], fill: ramColor[name] }));
 
   const nav = onNavigate || (() => {});
 
@@ -153,14 +125,11 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
 
       {/* KPIs */}
       <div className="kpi-row">
-        <KpiCard value={todos.length} label="Total Equipos"       color="cyan"   icon={<Laptop size={20}/>}
+        <KpiCard value={todos.length} label="Total Equipos" color="var(--neon-cyan)" Icon={Laptop}
           onClick={() => nav({})} />
-        <KpiCard value={enUso}    label="En Uso"       color="amber"  icon={<Users size={20}/>}
-          onClick={() => nav({ estado: 'En uso' })} />
-        <KpiCard value={lista}    label="Disponibles"  color="green"  icon={<Package size={20}/>}
-          onClick={() => nav({ estado: 'Disponible' })} />
-        <KpiCard value={revision} label="En Revisión"  color="pink"   icon={<AlertCircle size={20}/>}
-          onClick={() => nav({ estado: 'En revisión' })} />
+        <KpiEstado estado="En uso"      value={enUso}    label="En Uso"      onClick={() => nav({ estado: 'En uso' })} />
+        <KpiEstado estado="Disponible"  value={lista}    label="Disponibles" onClick={() => nav({ estado: 'Disponible' })} />
+        <KpiEstado estado="En revisión" value={revision} label="En Revisión" onClick={() => nav({ estado: 'En revisión' })} />
       </div>
 
       <div className="accesorios-row">
@@ -172,27 +141,8 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
           rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} refresh={refresh} />
       </div>
 
-      {/* Fila 1: Estado + Piso + RAM */}
-      <div className="dash-row-3">
-
-        {/* Estado */}
-        <div className="dash-card card">
-          <h3 className="dash-card-title">Estado de equipos</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <PieChart>
-              <Pie data={byEstado} dataKey="value" nameKey="name"
-                cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}
-                onClick={(e) => e.name !== 'Sin estado' && nav({ estado: e.name })}
-                style={{ cursor: 'pointer' }}>
-                {byEstado.map((e, i) => (
-                  <Cell key={i} fill={ESTADO_COLORS[e.name] || '#334155'} stroke="transparent" />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={<CustomLegend />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      {/* Fila 1: Piso + RAM */}
+      <div className="dash-row-2col">
 
         {/* Piso */}
         <div className="dash-card card">
@@ -201,18 +151,14 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={byPiso} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
-              <XAxis dataKey="piso" tick={{ fontSize: 11, fill: '#3a6a88' }}
+              <XAxis dataKey="piso" tick={{ fontSize: 12, fill: '#3a6a88' }}
                 axisLine={{ stroke: 'rgba(0,229,255,0.1)' }} tickLine={false} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: '#3a6a88' }}
+              <YAxis allowDecimals={false} tick={{ fontSize: 12, fill: '#3a6a88' }}
                 axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
               <Bar dataKey="total" name="Equipos" radius={[4, 4, 0, 0]} maxBarSize={40}
-                style={{ cursor: 'pointer' }}
+                fill={COLOR_DATO} style={{ cursor: 'pointer', filter: `drop-shadow(0 0 4px ${COLOR_DATO}66)` }}
                 onClick={(data) => setPisoSeleccionado(data.piso)}>
-                {byPiso.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
-                    style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}66)` }} />
-                ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -221,19 +167,20 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
         {/* RAM */}
         <div className="dash-card card">
           <h3 className="dash-card-title">RAM</h3>
-          <p className="dash-card-hint">Click en un segmento para filtrar</p>
+          <p className="dash-card-hint">De menor a mayor capacidad · click en un segmento para filtrar</p>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={byRam} dataKey="value" nameKey="name"
                 cx="50%" cy="45%" outerRadius={85} innerRadius={42} paddingAngle={3}
-                onClick={(e) => nav({ ram: e.name })}
+                onClick={(e) => e.name !== 'Otro' && nav({ ram: e.name })}
                 style={{ cursor: 'pointer' }}>
-                {byRam.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} stroke="transparent" />
+                {byRam.map(r => (
+                  <Cell key={r.name} fill={r.fill} stroke="var(--surface)" strokeWidth={2} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
-              <Legend content={<CustomLegend />} />
+              {/* La leyenda sigue el orden de capacidad, no el alfabético de recharts */}
+              <Legend content={() => <CustomLegend payload={byRam.map(r => ({ value: r.name, color: r.fill }))} />} />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -252,17 +199,13 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
               margin={{ top: 4, right: 30, left: 10, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" horizontal={false} />
               <XAxis type="number" allowDecimals={false}
-                tick={{ fontSize: 11, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
+                tick={{ fontSize: 12, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
               <YAxis dataKey="modelo" type="category" width={155}
-                tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0,229,255,0.04)' }} />
               <Bar dataKey="total" name="Equipos" radius={[0, 4, 4, 0]} maxBarSize={22}
-                style={{ cursor: 'pointer' }}
+                fill={COLOR_DATO} style={{ cursor: 'pointer', filter: `drop-shadow(0 0 4px ${COLOR_DATO}66)` }}
                 onClick={(data) => nav({ modelo: data.modelo })}>
-                {byModelo.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]}
-                    style={{ filter: `drop-shadow(0 0 4px ${CHART_COLORS[i % CHART_COLORS.length]}66)` }} />
-                ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -272,7 +215,7 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
         <div className="dash-card card dash-actividad-card">
           <h3 className="dash-card-title">Actividad reciente</h3>
           {actividad.length === 0 ? (
-            <p style={{ fontSize: 12, color: 'var(--text-muted)', padding: '12px 0' }}>Sin actividad registrada aún.</p>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '12px 0' }}>Sin actividad registrada aún.</p>
           ) : (
             <div className="dash-feed">
               {actividad.map((h, i) => (
@@ -284,19 +227,10 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
                     <div className="dash-feed-top">
                       <span className="dash-feed-equipo">{h.equipo_modelo || `Equipo #${h.equipo_id}`}</span>
                       {h.equipo_serie && <span className="dash-feed-serie">NS: {h.equipo_serie}</span>}
-                      {h.equipo_piso && <span className="dash-feed-piso">{h.equipo_piso}</span>}
+                      {h.equipo_piso && <GrupoChip piso={h.equipo_piso} />}
                       <span className="dash-feed-time">{fmtDate(h.created_at)}</span>
                     </div>
-                    {h.campo === 'creacion' || h.campo === 'eliminacion' || h.campo === 'restauracion' ? (
-                      <span style={{ fontSize: 12, color: h.campo === 'eliminacion' ? 'var(--neon-pink)' : 'var(--neon-green)' }}>{h.valor_nuevo}</span>
-                    ) : (
-                      <div className="dash-feed-cambio">
-                        <span className="dash-feed-campo">{CAMPO_LABEL[h.campo] || h.campo}:</span>
-                        <span className="dash-feed-ant">{h.valor_ant || '—'}</span>
-                        <span style={{ color: 'var(--text-muted)' }}>→</span>
-                        <span className="dash-feed-nuevo">{h.valor_nuevo || '—'}</span>
-                      </div>
-                    )}
+                    <FeedCambio h={h} />
                     {h.nota && <span className="dash-feed-nota">"{h.nota}"</span>}
                     <span className="dash-feed-usuario">por {h.usuario_nombre}</span>
                   </div>
@@ -316,12 +250,45 @@ export default function Dashboard({ onNavigate, onOpenEquipo, refresh, rol, esGl
   );
 }
 
-function KpiCard({ value, label, color, icon, onClick }) {
+function KpiCard({ value, label, color, Icon, onClick, title }) {
   return (
-    <div className={`kpi-card kpi-${color}`} onClick={onClick} style={{ cursor: 'pointer' }}>
-      <div className="kpi-icon">{icon}</div>
+    <div className="kpi-card kpi-tono" onClick={onClick} title={title} style={{ cursor: 'pointer', '--c': color }}>
+      <div className="kpi-icon"><Icon size={20} /></div>
       <span className="kpi-num">{value}</span>
       <span className="kpi-label">{label}</span>
+    </div>
+  );
+}
+
+// KPI de un estado de equipo: usa el color e icono reservados de ese estado,
+// los mismos que ven las etiquetas del inventario y los asientos de Agentes.
+function KpiEstado({ estado, ...props }) {
+  const { color, Icon, desc } = metaEstado(estado);
+  return <KpiCard {...props} color={color} Icon={Icon} title={desc} />;
+}
+
+const CAMPOS_EVENTO = { creacion: 'disponible', restauracion: 'disponible', eliminacion: 'baja' };
+
+// Una línea del historial: icono del campo + valor anterior (tachado) →
+// valor nuevo. Los cambios de estado se muestran con su etiqueta de estado.
+function FeedCambio({ h }) {
+  const Icon = CAMPO_ICON[h.campo];
+  if (CAMPOS_EVENTO[h.campo]) {
+    return (
+      <span className="dash-feed-evento" style={{ '--c': `var(--estado-${CAMPOS_EVENTO[h.campo]})` }}>
+        {Icon && <Icon size={12} />} {h.valor_nuevo}
+      </span>
+    );
+  }
+  const esEstado = h.campo === 'estado';
+  return (
+    <div className="dash-feed-cambio">
+      <span className="dash-feed-campo">
+        {Icon && <Icon size={12} />} {CAMPO_LABEL[h.campo] || h.campo}:
+      </span>
+      {esEstado && h.valor_ant ? <EstadoBadge estado={h.valor_ant} size={10} /> : <span className="dash-feed-ant">{h.valor_ant || '—'}</span>}
+      <ArrowRight size={11} className="dash-feed-flecha" />
+      {esEstado && h.valor_nuevo ? <EstadoBadge estado={h.valor_nuevo} size={10} /> : <span className="dash-feed-nuevo">{h.valor_nuevo || '—'}</span>}
     </div>
   );
 }
@@ -338,8 +305,8 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
-      <div className="dash-row-3">
-        {[1, 2, 3].map(i => (
+      <div className="dash-row-2col">
+        {[1, 2].map(i => (
           <div key={i} className="dash-card card" style={{ gap: 12 }}>
             <div className="skeleton-bar" style={{ width: '40%' }} />
             <div className="skeleton-bar" style={{ height: 180, borderRadius: 12 }} />

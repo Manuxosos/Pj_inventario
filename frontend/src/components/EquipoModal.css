@@ -8,7 +8,7 @@
 
 .form-section {}
 .section-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -32,7 +32,7 @@
   background: var(--view-value-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 14px;
+  font-size: 16px;
   min-height: 36px;
   display: flex;
   align-items: center;
@@ -43,7 +43,7 @@
   color: #991b1b;
   padding: 10px 14px;
   border-radius: var(--radius);
-  font-size: 13px;
+  font-size: 14px;
 }
 
 textarea.form-input { resize: vertical; }
@@ -55,7 +55,7 @@ textarea.form-input { resize: vertical; }
   background: none;
   border: none;
   color: var(--neon-cyan);
-  font-size: 11px;
+  font-size: 12px;
   cursor: pointer;
   padding: 0;
   font-family: inherit;
@@ -82,15 +82,15 @@ textarea.form-input { resize: vertical; }
   gap: 8px;
 }
 
-.historial-campo { font-size: 12px; font-weight: 700; color: var(--text); }
-.historial-time  { font-size: 10px; color: var(--text-muted); }
+.historial-campo { font-size: 13px; font-weight: 700; color: var(--text); }
+.historial-time  { font-size: 11px; color: var(--text-muted); }
 
 .historial-cambio {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .historial-ant   { color: var(--neon-pink);  background: rgba(255,61,127,0.08); padding: 1px 7px; border-radius: 4px; }
@@ -104,5 +104,5 @@ textarea.form-input { resize: vertical; }
   flex-wrap: wrap;
 }
 
-.historial-usuario { font-size: 10px; color: var(--text-muted); }
-.historial-nota    { font-size: 11px; color: var(--neon-amber); font-style: italic; }
+.historial-usuario { font-size: 11px; color: var(--text-muted); }
+.historial-nota    { font-size: 12px; color: var(--text-muted); font-style: italic; }

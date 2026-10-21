@@ -107,7 +107,14 @@ function buildEquiposQuery(query, edificioId) {
     const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
     if (vals.length) q += ` AND estado IN (${vals.map(v => add(v)).join(',')})`;
   }
-  if (ram)    q += ` AND ram = ${add(ram)}`;
+  if (ram) {
+    // "16GB" agrupa todas las formas en que el Excel escribe esa capacidad
+    // ("16 GB", "16.00GB", "16 GB RAM"...): se compara el primer número.
+    // Debe coincidir con grupoRam() de frontend/src/semantica.js.
+    const gb = /^(\d+)GB$/.exec(ram);
+    if (gb) q += ` AND ROUND(SUBSTRING(REPLACE(ram, ',', '.') FROM '(\\d+(?:\\.\\d+)?)')::numeric) = ${add(parseInt(gb[1]))}`;
+    else    q += ` AND ram = ${add(ram)}`;
+  }
   if (modelo) q += ` AND marca_modelo = ${add(modelo)}`;
   if (accesorio && ACCESORIO_COLS.includes(accesorio)) {
     q += ` AND (${accesorio} = 'Si' OR ${accesorio} = 'Si 2')`;
@@ -587,6 +594,126 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     error500(res, err);
+  }
+});
+
+// GET /api/agentes/edificios — resumen para la vista de edificios de Agentes:
+// cada edificio visible para el usuario con sus pisos y cuántos agentes tiene
+// cada uno. Usa la misma regla que el tablero (piso más frecuente de los
+// equipos del agente, sin BODEGA). Un usuario con edificio fijo ve solo el suyo.
+app.get('/api/agentes/edificios', async (req, res) => {
+  try {
+    const fijo = req.user.edificio_id;
+    const { rows: edificios } = await pool.query(
+      fijo != null ? 'SELECT id, nombre FROM edificios WHERE id = $1' : 'SELECT id, nombre FROM edificios ORDER BY nombre',
+      fijo != null ? [fijo] : []
+    );
+    const { rows: equipos } = await pool.query(
+      `SELECT edificio_id, piso, UPPER(TRIM(responsable)) AS agente FROM equipos
+       WHERE eliminado_en IS NULL AND responsable IS NOT NULL AND TRIM(responsable) != ''
+         AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'`
+    );
+    // edificio -> agente -> piso -> cantidad de equipos
+    const conteo = new Map();
+    for (const e of equipos) {
+      if (!conteo.has(e.edificio_id)) conteo.set(e.edificio_id, new Map());
+      const porAgente = conteo.get(e.edificio_id);
+      if (!porAgente.has(e.agente)) porAgente.set(e.agente, new Map());
+      const pisos = porAgente.get(e.agente);
+      pisos.set(e.piso, (pisos.get(e.piso) || 0) + 1);
+    }
+    const resultado = edificios.map(ed => {
+      const porPiso = new Map();
+      for (const pisos of (conteo.get(ed.id) || new Map()).values()) {
+        let mejor = null, max = -1;
+        for (const [piso, n] of pisos) if (n > max) { mejor = piso; max = n; }
+        porPiso.set(mejor, (porPiso.get(mejor) || 0) + 1);
+      }
+      const pisos = [...porPiso].map(([piso, agentes]) => ({ piso, agentes })).sort((a, b) => a.piso.localeCompare(b.piso, 'es', { numeric: true }));
+      return { id: ed.id, nombre: ed.nombre, pisos, agentes: pisos.reduce((s, p) => s + p.agentes, 0) };
+    });
+    res.json(resultado);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// PUT /api/agentes/trasladar — mueve un agente (y sus equipos) a otro edificio,
+// o lo intercambia con un agente de ese edificio. Solo admin con alcance
+// global, porque toca dos edificios. Cada equipo que cambia de edificio o de
+// piso queda en el historial. Body: { agente, origen, destino, piso,
+// intercambiarCon? } — piso es el piso de destino del agente que se traslada;
+// en un intercambio, el otro agente toma el piso y la mesa que deja el primero.
+app.put('/api/agentes/trasladar', requireRol('admin'), async (req, res) => {
+  if (req.user.edificio_id != null) return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+  const { agente, piso, intercambiarCon } = req.body;
+  const origen = parseInt(req.body.origen), destino = parseInt(req.body.destino);
+  if (!agente?.trim() || !piso?.trim() || !Number.isInteger(origen) || !Number.isInteger(destino)) {
+    return res.status(400).json({ error: 'Faltan datos (agente, origen, destino, piso)' });
+  }
+  if (origen === destino) return res.status(400).json({ error: 'El edificio de destino debe ser distinto al de origen' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: eds } = await client.query('SELECT id, nombre FROM edificios WHERE id = ANY($1)', [[origen, destino]]);
+    const nombreEd = new Map(eds.map(e => [e.id, e.nombre]));
+    if (nombreEd.size !== 2) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Edificio no encontrado' }); }
+    const usuarioNombre = req.user.nombre || req.user.usuario;
+
+    // Mueve todos los equipos (no eliminados) de un agente a otro edificio y
+    // piso, registra cada cambio y devuelve el piso y la mesa que deja.
+    async function mover(nombre, desde, hacia, pisoNuevo, mesaNueva, nota) {
+      const key = nombre.trim().toUpperCase();
+      const { rows: equipos } = await client.query(
+        'SELECT id, id_activo, numero_serie, piso FROM equipos WHERE UPPER(TRIM(responsable)) = $1 AND edificio_id = $2 AND eliminado_en IS NULL',
+        [key, desde]
+      );
+      if (equipos.length === 0) throw Object.assign(new Error('sin equipos'), { status: 404, msg: `${nombre} no tiene equipos en ${nombreEd.get(desde)}` });
+      const { rows: [asiento] } = await client.query('SELECT mesa FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [key, desde]);
+      const pisoAnterior = equipos[0].piso;
+      for (const eq of equipos) {
+        const label = eq.id_activo || eq.numero_serie || String(eq.id);
+        await client.query('UPDATE equipos SET edificio_id = $1, piso = $2, updated_at = NOW() WHERE id = $3', [hacia, pisoNuevo, eq.id]);
+        const registrar = (campo, ant, nuevo) => client.query(
+          `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, nota, edificio_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [eq.id, label, req.user.id, usuarioNombre, campo, ant, nuevo, nota, hacia]
+        );
+        await registrar('edificio', nombreEd.get(desde), nombreEd.get(hacia));
+        if (eq.piso !== pisoNuevo) await registrar('piso', eq.piso || '', pisoNuevo);
+      }
+      await client.query('DELETE FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [key, desde]);
+      if (mesaNueva != null) {
+        await client.query(
+          `INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa, edificio_id) VALUES ($1,$2,$3,$4)
+           ON CONFLICT (agente_key, edificio_id) DO UPDATE SET mesa = $3, updated_at = NOW()`,
+          [nombre.trim(), key, mesaNueva, hacia]
+        );
+      }
+      return { piso: pisoAnterior, mesa: asiento?.mesa ?? null, equipos: equipos.length };
+    }
+
+    let resultado;
+    if (intercambiarCon?.trim()) {
+      const nota = `Intercambio: ${agente.trim()} ↔ ${intercambiarCon.trim()}`;
+      const keyB = intercambiarCon.trim().toUpperCase();
+      const { rows: [asientoB] } = await client.query('SELECT mesa FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [keyB, destino]);
+      const a = await mover(agente, origen, destino, piso.trim(), asientoB?.mesa ?? null, nota);
+      const b = await mover(intercambiarCon, destino, origen, a.piso, a.mesa, nota);
+      resultado = { ok: true, intercambio: true, equipos: a.equipos + b.equipos };
+    } else {
+      const a = await mover(agente, origen, destino, piso.trim(), null, `Traslado de ${agente.trim()}`);
+      resultado = { ok: true, intercambio: false, equipos: a.equipos };
+    }
+    await client.query('COMMIT');
+    res.json(resultado);
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err.status) return res.status(err.status).json({ error: err.msg });
+    error500(res, err);
+  } finally {
+    client.release();
   }
 });
 

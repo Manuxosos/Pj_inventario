@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
-import { LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
+import { Routes, Route, Navigate, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Home, LayoutDashboard, ClipboardList, Users, CheckSquare, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
 import Login from './components/Login';
 import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
@@ -11,6 +12,7 @@ import './App.css';
 // junta en el bundle inicial.
 const EquiposList  = lazy(() => import('./components/EquiposList'));
 const EquipoModal  = lazy(() => import('./components/EquipoModal'));
+const Inicio       = lazy(() => import('./components/Inicio'));
 const Dashboard    = lazy(() => import('./components/Dashboard'));
 const Usuarios     = lazy(() => import('./components/Usuarios'));
 const Tareas       = lazy(() => import('./components/Tareas'));
@@ -18,6 +20,9 @@ const Agentes      = lazy(() => import('./components/Agentes'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 
 const INACTIVIDAD_MS = 15 * 60 * 1000;
+// El edificio elegido se recuerda en la pestaña del navegador para que
+// recargar una sección (F5) no vuelva a "Todos los edificios".
+const EDIFICIO_KEY = 'edificioSel';
 
 function iniciales(nombre) {
   return nombre.trim().split(/\s+/).slice(0, 2).map(p => p[0]).join('').toUpperCase();
@@ -33,12 +38,19 @@ function getUserInfo() {
   }
 }
 
+function leerEdificioGuardado() {
+  const v = sessionStorage.getItem(EDIFICIO_KEY);
+  const id = v ? parseInt(v) : null;
+  setEdificioActivo(id);
+  return id;
+}
+
 export default function App() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [autenticado, setAutenticado] = useState(!!localStorage.getItem('token'));
-  const [tab, setTab] = useState('dashboard');
   const [modal, setModal] = useState(null);
   const [refresh, setRefresh] = useState(0);
-  const [dashboardFilter, setDashboardFilter] = useState(null);
   const [toast, setToast] = useState(null); // { message, type }
   const [buscadorAbierto, setBuscadorAbierto] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -52,18 +64,25 @@ export default function App() {
   // observador puede ser global (Santiago) o limitado a un solo edificio.
   const esGlobal     = !!userInfo && userInfo.edificio_id == null;
   const [edificios, setEdificios]   = useState([]);
-  const [edificioSel, setEdificioSel] = useState(null); // null = "Todos los edificios"
+  const [edificioSel, setEdificioSel] = useState(leerEdificioGuardado); // null = "Todos los edificios"
 
-  const handleDashboardNav = (filter) => {
-    setDashboardFilter(filter);
-    setTab('inventario');
+  const enInventario = location.pathname === '/inventario';
+
+  // Ir a una sección. `filtros` viaja en el estado del historial, así el
+  // Inventario abre filtrado desde el Dashboard y lo sigue estando al
+  // recargar o al volver con el botón Atrás.
+  const irA = (seccion, filtros = null) => {
+    setMenuAbierto(false);
+    navigate(`/${seccion}`, { state: { filtros } });
   };
+
+  const handleDashboardNav = (filter) => irA('inventario', filter);
 
   const handleOpenEquipo = async (equipoId) => {
     try {
       const equipo = await getEquipo(equipoId);
       setModal({ mode: 'view', equipo });
-    } catch (err) {
+    } catch {
       showToast('No se pudo abrir el equipo', 'error');
     }
   };
@@ -72,7 +91,7 @@ export default function App() {
     try {
       const equipo = await getEquipo(equipoId);
       setModal({ mode: 'edit', equipo });
-    } catch (err) {
+    } catch {
       showToast('No se pudo abrir el equipo', 'error');
     }
   };
@@ -120,17 +139,25 @@ export default function App() {
     };
   }, [autenticado]);
 
-  if (!autenticado) return <Login onLogin={() => setAutenticado(true)} />;
+  // Al iniciar sesión siempre se entra por la página de Inicio.
+  if (!autenticado) {
+    return <Login onLogin={() => { setAutenticado(true); navigate('/inicio', { replace: true }); }} />;
+  }
 
   const handleEdificioChange = (valor) => {
     const id = valor === '' ? null : parseInt(valor);
     setEdificioSel(id);
     setEdificioActivo(id);
+    if (id == null) sessionStorage.removeItem(EDIFICIO_KEY);
+    else sessionStorage.setItem(EDIFICIO_KEY, String(id));
     setRefresh(r => r + 1);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
+    sessionStorage.removeItem(EDIFICIO_KEY);
+    setEdificioActivo(null);
+    setEdificioSel(null);
     setAutenticado(false);
   };
 
@@ -142,136 +169,167 @@ export default function App() {
     showToast(msg);
   };
 
-  return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-inner">
+  const navClass = ({ isActive }) => `nav-tab ${isActive ? 'active' : ''}`;
+  const cerrarMenu = () => setMenuAbierto(false);
 
-          <div className="header-brand" onClick={() => { setTab('dashboard'); setMenuAbierto(false); }} style={{ cursor: 'pointer' }}>
-            <Monitor size={26} color="#60a5fa" />
-            <h1>Inventario IT</h1>
-          </div>
+  const userBadge = userInfo && (
+    <div className="user-badge">
+      <div
+        className="user-badge-avatar"
+        style={{ '--avatar-color': colorAgente() }}
+      >
+        {iniciales(userInfo.nombre || userInfo.usuario)}
+      </div>
+      <div>
+        <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
+        <div className="user-badge-rol">{rol}</div>
+      </div>
+    </div>
+  );
 
-          <button
-            className="header-menu-toggle"
-            onClick={() => setMenuAbierto(m => !m)}
-            aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
-          >
-            {menuAbierto ? <X size={20} /> : <Menu size={20} />}
-          </button>
+  const header = (
+    <header className="app-header">
+      <div className="header-inner">
 
-          <div className={`header-collapsible ${menuAbierto ? 'header-collapsible-open' : ''}`}>
+        <Link to="/inicio" className="header-brand" onClick={cerrarMenu} title="Volver al inicio">
+          <Monitor size={26} color="#60a5fa" />
+          <h1>OfficeTech</h1>
+        </Link>
 
-            {esGlobal && (
-              <div className="edificio-selector" title="Edificio">
-                <Building2 size={15} />
-                <select
-                  className="form-input"
-                  value={edificioSel ?? ''}
-                  onChange={e => handleEdificioChange(e.target.value)}
-                  style={{ width: 'auto', padding: '4px 8px' }}
-                >
-                  <option value="">Todos los edificios</option>
-                  {edificios.map(ed => (
-                    <option key={ed.id} value={ed.id}>{ed.nombre}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+        <button
+          className="header-menu-toggle"
+          onClick={() => setMenuAbierto(m => !m)}
+          aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+        >
+          {menuAbierto ? <X size={20} /> : <Menu size={20} />}
+        </button>
 
-            <nav className="header-nav">
-              <button className={`nav-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => { setTab('dashboard'); setMenuAbierto(false); }}>
-                <LayoutDashboard size={15} /> Dashboard
-              </button>
-              <button className={`nav-tab ${tab === 'inventario' ? 'active' : ''}`} onClick={() => { setDashboardFilter(null); setTab('inventario'); setMenuAbierto(false); }}>
-                <ClipboardList size={15} /> Inventario
-              </button>
-              <button className={`nav-tab ${tab === 'tareas' ? 'active' : ''}`} onClick={() => { setTab('tareas'); setMenuAbierto(false); }}>
-                <CheckSquare size={15} /> Tareas
-              </button>
-              <button className={`nav-tab ${tab === 'agentes' ? 'active' : ''}`} onClick={() => { setTab('agentes'); setMenuAbierto(false); }}>
-                <Armchair size={15} /> Agentes
-              </button>
-              {esAdmin && (
-                <button className={`nav-tab ${tab === 'usuarios' ? 'active' : ''}`} onClick={() => { setTab('usuarios'); setMenuAbierto(false); }}>
-                  <Users size={15} /> Usuarios
-                </button>
-              )}
-            </nav>
+        <div className={`header-collapsible ${menuAbierto ? 'header-collapsible-open' : ''}`}>
 
-            <div className="header-actions">
-              <button className="btn-icon-neon" onClick={() => { setBuscadorAbierto(true); setMenuAbierto(false); }} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
-                <Search size={16} />
-              </button>
-              {userInfo && (
-                <div className="user-badge">
-                  <div
-                    className="user-badge-avatar"
-                    style={{ '--avatar-color': colorAgente(userInfo.nombre || userInfo.usuario) }}
-                  >
-                    {iniciales(userInfo.nombre || userInfo.usuario)}
-                  </div>
-                  <div>
-                    <div className="user-badge-name">{userInfo.nombre || userInfo.usuario}</div>
-                    <div className="user-badge-rol">{rol}</div>
-                  </div>
-                </div>
-              )}
-              {tab === 'inventario' && puedeEditar && (!esGlobal || edificioSel != null) && (
-                <button className="btn btn-primary" onClick={() => { setModal({ mode: 'create' }); setMenuAbierto(false); }}>
-                  <PlusCircle size={14} /> Nuevo Equipo
-                </button>
-              )}
-              <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
-                <LogOut size={16} />
-              </button>
+          {esGlobal && (
+            <div className="edificio-selector" title="Edificio">
+              <Building2 size={15} />
+              <select
+                className="form-input"
+                value={edificioSel ?? ''}
+                onChange={e => handleEdificioChange(e.target.value)}
+                style={{ width: 'auto', padding: '4px 8px' }}
+              >
+                <option value="">Todos los edificios</option>
+                {edificios.map(ed => (
+                  <option key={ed.id} value={ed.id}>{ed.nombre}</option>
+                ))}
+              </select>
             </div>
+          )}
 
+          <nav className="header-nav">
+            <NavLink to="/inicio" className={navClass} onClick={cerrarMenu}>
+              <Home size={15} /> Inicio
+            </NavLink>
+            <NavLink to="/dashboard" className={navClass} onClick={cerrarMenu}>
+              <LayoutDashboard size={15} /> Dashboard
+            </NavLink>
+            <NavLink to="/inventario" state={{ filtros: null }} className={navClass} onClick={cerrarMenu}>
+              <ClipboardList size={15} /> Inventario
+            </NavLink>
+            <NavLink to="/tareas" className={navClass} onClick={cerrarMenu}>
+              <CheckSquare size={15} /> Tareas
+            </NavLink>
+            <NavLink to="/agentes" className={navClass} onClick={cerrarMenu}>
+              <Armchair size={15} /> Agentes
+            </NavLink>
+            {esAdmin && (
+              <NavLink to="/usuarios" className={navClass} onClick={cerrarMenu}>
+                <Users size={15} /> Usuarios
+              </NavLink>
+            )}
+          </nav>
+
+          <div className="header-actions">
+            <button className="btn-icon-neon" onClick={() => { setBuscadorAbierto(true); cerrarMenu(); }} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
+              <Search size={16} />
+            </button>
+            {userBadge}
+            {enInventario && puedeEditar && (!esGlobal || edificioSel != null) && (
+              <button className="btn btn-primary" onClick={() => { setModal({ mode: 'create' }); cerrarMenu(); }}>
+                <PlusCircle size={14} /> Nuevo Equipo
+              </button>
+            )}
+            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
+              <LogOut size={16} />
+            </button>
           </div>
 
         </div>
-      </header>
 
+      </div>
+    </header>
+  );
+
+  // Cada sección vive en su propia dirección; la barra superior solo
+  // aparece dentro de las secciones, no en la página de Inicio.
+  const seccion = (contenido) => (
+    <>
+      {header}
       <main className="app-main">
-        <div key={tab} className="tab-fade">
+        <div key={location.key} className="tab-fade">
           <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
-            {tab === 'dashboard'  && (
-              <Dashboard
-                onNavigate={handleDashboardNav}
-                onOpenEquipo={handleOpenEquipo}
-                refresh={refresh}
-                rol={rol}
-                esGlobal={esGlobal}
-                edificioSel={edificioSel}
-              />
-            )}
-            {tab === 'inventario' && (
-              <EquiposList
-                refresh={refresh}
-                externalFilters={dashboardFilter}
-                rol={rol}
-                esGlobal={esGlobal}
-                edificioSel={edificioSel}
-                onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
-                onView={(equipo) => setModal({ mode: 'view', equipo })}
-                onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}
-                showToast={showToast}
-              />
-            )}
-            {tab === 'tareas'   && <Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />}
-            {tab === 'agentes'  && (
-              <Agentes
-                rol={rol}
-                onOpenEquipo={handleOpenEquipo}
-                onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
-                onGoToInventario={() => { setDashboardFilter(null); setTab('inventario'); }}
-                refresh={refresh}
-              />
-            )}
-            {tab === 'usuarios' && esAdmin && <Usuarios miId={userInfo?.id} refresh={refresh} />}
+            {contenido}
           </Suspense>
         </div>
       </main>
+    </>
+  );
+
+  return (
+    <div className="app">
+      <Routes>
+        <Route path="/inicio" element={
+          <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
+            <Inicio onGoToTab={(t) => irA(t)} userBadge={userBadge} onLogout={handleLogout} />
+          </Suspense>
+        } />
+        <Route path="/dashboard" element={seccion(
+          <Dashboard
+            onNavigate={handleDashboardNav}
+            onOpenEquipo={handleOpenEquipo}
+            refresh={refresh}
+            rol={rol}
+            esGlobal={esGlobal}
+            edificioSel={edificioSel}
+          />
+        )} />
+        <Route path="/inventario" element={seccion(
+          <EquiposList
+            refresh={refresh}
+            externalFilters={location.state?.filtros ?? null}
+            rol={rol}
+            esGlobal={esGlobal}
+            edificioSel={edificioSel}
+            onEdit={puedeEditar ? (equipo) => setModal({ mode: 'edit', equipo }) : undefined}
+            onView={(equipo) => setModal({ mode: 'view', equipo })}
+            onCreate={puedeEditar ? () => setModal({ mode: 'create' }) : undefined}
+            showToast={showToast}
+          />
+        )} />
+        <Route path="/tareas" element={seccion(<Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />)} />
+        <Route path="/agentes" element={seccion(
+          <Agentes
+            rol={rol}
+            esGlobal={esGlobal}
+            showToast={showToast}
+            onOpenEquipo={handleOpenEquipo}
+            onEditEquipo={puedeEditar ? handleEditEquipo : undefined}
+            onGoToInventario={() => irA('inventario')}
+            refresh={refresh}
+          />
+        )} />
+        <Route path="/usuarios" element={
+          esAdmin ? seccion(<Usuarios miId={userInfo?.id} refresh={refresh} />) : <Navigate to="/inicio" replace />
+        } />
+        <Route path="*" element={<Navigate to="/inicio" replace />} />
+      </Routes>
 
       {modal && (
         <Suspense fallback={null}>
@@ -294,7 +352,7 @@ export default function App() {
           <GlobalSearch
             onClose={() => setBuscadorAbierto(false)}
             onOpenEquipo={handleOpenEquipo}
-            onGoToTab={setTab}
+            onGoToTab={(t) => irA(t)}
           />
         </Suspense>
       )}
