@@ -57,7 +57,7 @@ export default function Agentes({ rol, esGlobal, onOpenEquipo, onEditEquipo, onG
               </span>
               <span className="edificio-nombre">{ed.nombre}</span>
               <span className="edificio-datos">
-                <span><Users size={13} /> {ed.agentes} agentes</span>
+                <span><Users size={13} /> {ed.agentes} {ed.agentes === 1 ? 'agente' : 'agentes'}</span>
                 <span><Layers size={13} /> {ed.pisos.length} {ed.pisos.length === 1 ? 'piso' : 'pisos'}</span>
               </span>
             </button>

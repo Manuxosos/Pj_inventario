@@ -159,7 +159,7 @@ export default function EdificioPopup({ edificio, origen, edificios, rol, esGlob
             <div>
               <h2>{edificio.nombre}</h2>
               <p className="edp-sub">
-                <Users size={13} /> {totalAgentes} agentes · {pisos.length} {pisos.length === 1 ? 'piso' : 'pisos'}
+                <Users size={13} /> {totalAgentes} {totalAgentes === 1 ? 'agente' : 'agentes'} · {pisos.length} {pisos.length === 1 ? 'piso' : 'pisos'}
               </p>
             </div>
           </div>
@@ -218,7 +218,7 @@ export default function EdificioPopup({ edificio, origen, edificios, rol, esGlob
                   <button className="edp-piso-losa" onClick={() => togglePiso(piso)} aria-expanded={abierto}>
                     <IconoUbicacion piso={piso} size={16} />
                     <span className="edp-piso-nombre">{piso}</span>
-                    <span className="edp-piso-meta">{nAgentes} agentes · {maxMesa} {maxMesa === 1 ? 'mesa' : 'mesas'}</span>
+                    <span className="edp-piso-meta">{nAgentes} {nAgentes === 1 ? 'agente' : 'agentes'} · {maxMesa} {maxMesa === 1 ? 'mesa' : 'mesas'}</span>
                     <ChevronDown size={16} className="edp-piso-chevron" />
                   </button>
                   <div className="edp-piso-contenido">

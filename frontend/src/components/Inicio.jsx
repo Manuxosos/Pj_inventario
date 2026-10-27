@@ -44,7 +44,6 @@ export default function Inicio({ onGoToTab, userBadge, onLogout }) {
           <h1>Office<span>Tech</span></h1>
         </div>
         <p className="inicio-slogan">Control total de la tecnología y la operación, en un solo lugar.</p>
-        <p className="inicio-sub">Sistema de gestión y administración para <strong>Matrix</strong></p>
       </section>
 
       <section className="inicio-zonas">
