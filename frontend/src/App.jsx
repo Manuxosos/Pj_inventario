@@ -188,102 +188,112 @@ export default function App() {
     </div>
   );
 
-  const header = (
-    <header className="app-header">
-      <div className="header-inner">
-
-        <Link to="/inicio" className="header-brand" onClick={cerrarMenu} title="Volver al inicio">
-          <Monitor size={26} color="#60a5fa" />
+  const sidebar = (
+    <>
+      <aside className={`app-sidebar ${menuAbierto ? 'app-sidebar-abierta' : ''}`}>
+        <Link to="/inicio" className="sidebar-brand" onClick={cerrarMenu}>
+          <Monitor size={24} color="#60a5fa" />
           <h1>OfficeTech</h1>
         </Link>
 
-        <button
-          className="header-menu-toggle"
-          onClick={() => setMenuAbierto(m => !m)}
-          aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
-        >
-          {menuAbierto ? <X size={20} /> : <Menu size={20} />}
-        </button>
+        <nav className="sidebar-nav">
+          <NavLink to="/inicio" className={navClass} onClick={cerrarMenu}>
+            <Home size={16} /> Inicio
+          </NavLink>
 
-        <div className={`header-collapsible ${menuAbierto ? 'header-collapsible-open' : ''}`}>
-
-          {esGlobal && (
-            <div className="edificio-selector" title="Edificio">
-              <Building2 size={15} />
-              <select
-                className="form-input"
-                value={edificioSel ?? ''}
-                onChange={e => handleEdificioChange(e.target.value)}
-                style={{ width: 'auto', padding: '4px 8px' }}
-              >
-                <option value="">Todos los edificios</option>
-                {edificios.map(ed => (
-                  <option key={ed.id} value={ed.id}>{ed.nombre}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <nav className="header-nav">
-            <NavLink to="/inicio" className={navClass} onClick={cerrarMenu}>
-              <Home size={15} /> Inicio
-            </NavLink>
+          <div className="sidebar-grupo">
+            <span className="sidebar-grupo-label">IT Zone</span>
             <NavLink to="/dashboard" className={navClass} onClick={cerrarMenu}>
-              <LayoutDashboard size={15} /> Dashboard
-            </NavLink>
-            <NavLink to="/inventario" state={{ filtros: null }} className={navClass} onClick={cerrarMenu}>
-              <ClipboardList size={15} /> Inventario
+              <LayoutDashboard size={16} /> Dashboard
             </NavLink>
             <NavLink to="/tareas" className={navClass} onClick={cerrarMenu}>
-              <CheckSquare size={15} /> Tareas
+              <CheckSquare size={16} /> Tareas
             </NavLink>
             <NavLink to="/tickets" className={navClass} onClick={cerrarMenu}>
-              <Ticket size={15} /> Tickets
+              <Ticket size={16} /> Tickets
+            </NavLink>
+          </div>
+
+          <div className="sidebar-grupo">
+            <span className="sidebar-grupo-label">Black Zone</span>
+            <NavLink to="/inventario" state={{ filtros: null }} className={navClass} onClick={cerrarMenu}>
+              <ClipboardList size={16} /> Inventario
             </NavLink>
             <NavLink to="/agentes" className={navClass} onClick={cerrarMenu}>
-              <Armchair size={15} /> Agentes
+              <Armchair size={16} /> Agentes
             </NavLink>
             {esAdmin && (
               <NavLink to="/usuarios" className={navClass} onClick={cerrarMenu}>
-                <Users size={15} /> Usuarios
+                <Users size={16} /> Usuarios
               </NavLink>
             )}
-          </nav>
-
-          <div className="header-actions">
-            <button className="btn-icon-neon" onClick={() => { setBuscadorAbierto(true); cerrarMenu(); }} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
-              <Search size={16} />
-            </button>
-            {userBadge}
-            {enInventario && puedeEditar && (!esGlobal || edificioSel != null) && (
-              <button className="btn btn-primary" onClick={() => { setModal({ mode: 'create' }); cerrarMenu(); }}>
-                <PlusCircle size={14} /> Nuevo Equipo
-              </button>
-            )}
-            <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
-              <LogOut size={16} />
-            </button>
           </div>
+        </nav>
+      </aside>
+      {menuAbierto && <div className="sidebar-overlay" onClick={cerrarMenu} />}
+    </>
+  );
 
-        </div>
+  const topbar = (
+    <header className="app-topbar">
+      <button
+        className="header-menu-toggle"
+        onClick={() => setMenuAbierto(m => !m)}
+        aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+      >
+        {menuAbierto ? <X size={20} /> : <Menu size={20} />}
+      </button>
 
+      <div className="app-topbar-right">
+        {esGlobal && (
+          <div className="edificio-selector" title="Edificio">
+            <Building2 size={15} />
+            <select
+              className="form-input"
+              value={edificioSel ?? ''}
+              onChange={e => handleEdificioChange(e.target.value)}
+              style={{ width: 'auto', padding: '4px 8px' }}
+            >
+              <option value="">Todos los edificios</option>
+              {edificios.map(ed => (
+                <option key={ed.id} value={ed.id}>{ed.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
+        <button className="btn-icon-neon" onClick={() => setBuscadorAbierto(true)} title="Buscar (Ctrl+K)" aria-label="Buscar (Ctrl+K)">
+          <Search size={16} />
+        </button>
+        {enInventario && puedeEditar && (!esGlobal || edificioSel != null) && (
+          <button className="btn btn-primary" onClick={() => setModal({ mode: 'create' })}>
+            <PlusCircle size={14} /> Nuevo Equipo
+          </button>
+        )}
+        {userBadge}
+        <button className="btn-icon-neon" onClick={handleLogout} title="Cerrar sesión" aria-label="Cerrar sesión">
+          <LogOut size={16} />
+        </button>
       </div>
     </header>
   );
 
-  // Cada sección vive en su propia dirección; la barra superior solo
-  // aparece dentro de las secciones, no en la página de Inicio.
+  // Cada sección vive en su propia dirección, con la barra lateral y la
+  // barra superior angosta; la página de Inicio no lleva ninguna de las
+  // dos (es el punto de entrada de pantalla completa).
   const seccion = (contenido) => (
-    <>
-      {header}
-      <main className="app-main">
-        <div key={location.key} className="tab-fade">
-          <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
-            {contenido}
-          </Suspense>
-        </div>
-      </main>
-    </>
+    <div className="app-shell">
+      {sidebar}
+      <div className="app-content">
+        {topbar}
+        <main className="app-main">
+          <div key={location.key} className="tab-fade">
+            <Suspense fallback={<div className="tab-suspense-fallback">Cargando…</div>}>
+              {contenido}
+            </Suspense>
+          </div>
+        </main>
+      </div>
+    </div>
   );
 
   return (
