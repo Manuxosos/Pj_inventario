@@ -11,7 +11,7 @@ const ZONAS = [
     descripcion: 'Soporte, métricas y costos del área de tecnología',
     modulos: [
       { tab: 'tareas',    titulo: 'Tareas',    detalle: 'Pendientes del equipo IT',            Icono: CheckSquare },
-      { tab: null,        titulo: 'Tickets',   detalle: 'Solicitudes y soporte',               Icono: Ticket },
+      { tab: 'tickets',   titulo: 'Tickets',   detalle: 'Bitácora de servicios IT',            Icono: Ticket },
       { tab: 'dashboard', titulo: 'Dashboard', detalle: 'Indicadores de equipos e inventario', Icono: LayoutDashboard, ancho: true },
       { tab: null,        titulo: 'Gastos',    detalle: 'Compras y presupuesto IT',            Icono: Wallet, ancho: true },
     ],

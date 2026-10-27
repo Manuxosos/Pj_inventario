@@ -229,6 +229,23 @@ async function initSchema() {
   await pool.query('UPDATE historial_equipos SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
   await pool.query('UPDATE asientos_agentes SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
 
+  // Bitácora de servicios realizados por IT (Tickets): registro de lo que
+  // un IT ya hizo (no una cola de pendientes como Tareas). No se edita una
+  // vez creado, solo se puede borrar un registro cargado por error.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id             SERIAL PRIMARY KEY,
+      categoria      TEXT NOT NULL,
+      descripcion    TEXT NOT NULL DEFAULT '',
+      usuario_id     INTEGER,
+      usuario_nombre TEXT NOT NULL DEFAULT '',
+      edificio_id    INTEGER REFERENCES edificios(id),
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_categoria_check`);
+  await pool.query(`ALTER TABLE tickets ADD CONSTRAINT tickets_categoria_check CHECK (categoria IN ('accesorio','instalacion','reparacion','soporte','otro'))`);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {

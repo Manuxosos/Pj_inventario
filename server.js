@@ -444,6 +444,59 @@ app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
   }
 });
 
+// ── Tickets: bitácora de servicios ya realizados por IT (no es una cola de
+// pendientes como Tareas: se crea ya resuelto, con quién y cuándo). ────────────
+const TICKET_CATEGORIAS = ['accesorio', 'instalacion', 'reparacion', 'soporte', 'otro'];
+
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [];
+    let q = 'SELECT * FROM tickets';
+    if (scope != null) { params.push(scope); q += ` WHERE edificio_id = $${params.length}`; }
+    q += ' ORDER BY created_at DESC';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.post('/api/tickets', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
+    const { categoria, descripcion } = req.body;
+    if (!TICKET_CATEGORIAS.includes(categoria)) return res.status(400).json({ error: 'Categoría inválida' });
+    if (!descripcion?.trim()) return res.status(400).json({ error: 'La descripción es obligatoria' });
+    const { rows } = await pool.query(
+      `INSERT INTO tickets (categoria, descripcion, usuario_id, usuario_nombre, edificio_id)
+       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [categoria, descripcion.trim(), req.user.id, req.user.nombre || req.user.usuario, edificioId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.delete('/api/tickets/:id', requireRol('admin'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM tickets WHERE id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
 // ── Usuarios asignables (para dropdown de tareas) ─────────────────────────────
 app.get('/api/usuarios/asignables', async (req, res) => {
   try {

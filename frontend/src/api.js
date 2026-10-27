@@ -70,6 +70,11 @@ export const createTarea = (data)     => api.post('/tareas', { ...data, edificio
 export const updateTarea = (id, data) => api.put(`/tareas/${id}`, data).then(r => r.data);
 export const deleteTarea = (id)       => api.delete(`/tareas/${id}`).then(r => r.data);
 
+// Tickets: bitácora de servicios ya realizados por IT
+export const getTickets    = ()     => api.get('/tickets').then(r => r.data);
+export const createTicket  = (data) => api.post('/tickets', { ...data, edificio_id: data.edificio_id ?? edificioActivo }).then(r => r.data);
+export const deleteTicket  = (id)   => api.delete(`/tickets/${id}`).then(r => r.data);
+
 // Tablero de agentes por piso/mesa
 // `edificio` (opcional) fija el edificio de la consulta; sin él se usa el activo.
 const conEdificio = (edificio) => (edificio != null ? { params: { edificio } } : undefined);
