@@ -62,3 +62,20 @@ La fuente de verdad operativa es el Excel maestro (`inventariomaster.xlsx`, vive
 - Prefiere que se le pregunte antes de hacer `git push`
 - Le gusta que los scripts puntuales (importaciones, fixes de datos) se borren del repo después de usarlos, no dejarlos como deuda
 - Comunicación en español
+- **Ante cualquier cambio o arreglo**: avisar siempre cómo probarlo de forma local antes de subirlo al dominio real. No pasar directo a "subilo a producción" sin ofrecer antes el paso de prueba local (o, si Claude Code corre en un sandbox con capacidad de probar ahí mismo con Playwright, mostrar esa prueba igual, pero siempre dejando en claro que es un paso previo a producción, no el deploy en sí)
+
+## Entorno de prueba local del usuario (Mac, configurado una vez)
+
+El usuario tiene un clon del repo en `~/Documents/Proyecto_Inventario` en su Mac (chip Apple Silicon), con Node y PostgreSQL 16 instalados vía Homebrew (`/opt/homebrew`). Base de datos de prueba `inventario_test` (usuario `test_user`/`test123`, con permisos ya otorgados), separada de la real — nunca se toca production desde ahí. El `.env` en la raíz del repo ya tiene `APP_USER=admin` / `APP_PASSWORD=Admin12345` para esa base de prueba.
+
+Para que el usuario vuelva a probar un cambio después de actualizarlo (`git pull` en la rama correspondiente dentro de esa carpeta):
+```bash
+cd ~/Documents/Proyecto_Inventario
+node server.js          # pestaña 1, deja corriendo (migra el schema solo si hay tablas nuevas)
+```
+```bash
+cd ~/Documents/Proyecto_Inventario/frontend
+npm run dev              # pestaña 2 nueva (Cmd+T), deja corriendo
+```
+Después entra a `http://localhost:5173` y entra con `admin` / `Admin12345`. Para detener: `Ctrl+C` en ambas pestañas (no hace falta parar PostgreSQL entre pruebas, pero si lo necesita: `brew services stop postgresql@16`).
+
