@@ -10,6 +10,7 @@ require('dotenv').config();
 const { pool, initPromise } = require('./database');
 const { login, verificarToken } = require('./auth');
 const { construirWorkbookInventario } = require('./excelInventario');
+const { construirWorkbookGastos } = require('./excelGastos');
 
 const app = express();
 
@@ -107,7 +108,14 @@ function buildEquiposQuery(query, edificioId) {
     const vals = estadoIn.split(',').map(s => s.trim()).filter(Boolean);
     if (vals.length) q += ` AND estado IN (${vals.map(v => add(v)).join(',')})`;
   }
-  if (ram)    q += ` AND ram = ${add(ram)}`;
+  if (ram) {
+    // "16GB" agrupa todas las formas en que el Excel escribe esa capacidad
+    // ("16 GB", "16.00GB", "16 GB RAM"...): se compara el primer número.
+    // Debe coincidir con grupoRam() de frontend/src/semantica.js.
+    const gb = /^(\d+)GB$/.exec(ram);
+    if (gb) q += ` AND ROUND(SUBSTRING(REPLACE(ram, ',', '.') FROM '(\\d+(?:\\.\\d+)?)')::numeric) = ${add(parseInt(gb[1]))}`;
+    else    q += ` AND ram = ${add(ram)}`;
+  }
   if (modelo) q += ` AND marca_modelo = ${add(modelo)}`;
   if (accesorio && ACCESORIO_COLS.includes(accesorio)) {
     q += ` AND (${accesorio} = 'Si' OR ${accesorio} = 'Si 2')`;
@@ -437,6 +445,166 @@ app.delete('/api/tareas/:id', requireRol('admin'), async (req, res) => {
   }
 });
 
+// ── Tickets: bitácora de servicios ya realizados por IT (no es una cola de
+// pendientes como Tareas: se crea ya resuelto, con quién y cuándo). ────────────
+const TICKET_CATEGORIAS = ['accesorio', 'instalacion', 'reparacion', 'soporte', 'otro'];
+
+app.get('/api/tickets', async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [];
+    let q = 'SELECT * FROM tickets';
+    if (scope != null) { params.push(scope); q += ` WHERE edificio_id = $${params.length}`; }
+    q += ' ORDER BY created_at DESC';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.post('/api/tickets', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
+    const { categoria, descripcion } = req.body;
+    if (!TICKET_CATEGORIAS.includes(categoria)) return res.status(400).json({ error: 'Categoría inválida' });
+    if (!descripcion?.trim()) return res.status(400).json({ error: 'La descripción es obligatoria' });
+    const { rows } = await pool.query(
+      `INSERT INTO tickets (categoria, descripcion, usuario_id, usuario_nombre, edificio_id)
+       VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+      [categoria, descripcion.trim(), req.user.id, req.user.nombre || req.user.usuario, edificioId]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.delete('/api/tickets/:id', requireRol('admin'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM tickets WHERE id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// ── Gastos mensuales de IT (compras, suscripciones) ─────────────────────────
+const GASTO_PERIODICIDADES = ['mensual', 'anual', 'unico', 'segun_necesidad'];
+const GASTO_ESTADOS = ['activo', 'cancelado', 'pendiente'];
+
+function buildGastosQuery(query, edificioId) {
+  const { params, add } = mkParams();
+  let q = `SELECT g.*, e.nombre AS edificio_nombre FROM gastos g JOIN edificios e ON e.id = g.edificio_id WHERE 1=1`;
+  if (edificioId != null) q += ` AND g.edificio_id = ${add(edificioId)}`;
+  if (query.mes && /^\d{4}-\d{2}$/.test(query.mes)) {
+    q += ` AND to_char(g.fecha, 'YYYY-MM') = ${add(query.mes)}`;
+  }
+  q += ' ORDER BY g.fecha DESC, g.id DESC';
+  return { q, params };
+}
+
+function validarGasto(body) {
+  if (!body.fecha) return 'La fecha es obligatoria';
+  if (!body.concepto?.trim()) return 'El concepto es obligatorio';
+  const monto = parseFloat(body.monto);
+  if (!Number.isFinite(monto) || monto < 0) return 'El monto debe ser un número mayor o igual a 0';
+  if (!GASTO_PERIODICIDADES.includes(body.periodicidad)) return 'Periodicidad inválida';
+  if (!GASTO_ESTADOS.includes(body.estado)) return 'Estado inválido';
+  if (body.cantidad != null && body.cantidad !== '' && !Number.isInteger(parseInt(body.cantidad))) {
+    return 'La cantidad debe ser un número entero';
+  }
+  return null;
+}
+
+app.get('/api/gastos', async (req, res) => {
+  try {
+    const { q, params } = buildGastosQuery(req.query, scopeEdificio(req));
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.post('/api/gastos', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
+    const error = validarGasto(req.body);
+    if (error) return res.status(400).json({ error });
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
+    const { rows } = await pool.query(
+      `INSERT INTO gastos (edificio_id, fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [edificioId, fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado,
+       req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.put('/api/gastos/:id', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const error = validarGasto(req.body);
+    if (error) return res.status(400).json({ error });
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
+    const params = [fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado, req.params.id];
+    let q = `UPDATE gastos SET fecha=$1, concepto=$2, proveedor=$3, cantidad=$4, monto=$5, periodicidad=$6, estado=$7 WHERE id=$8`;
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.delete('/api/gastos/:id', requireRol('admin'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM gastos WHERE id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// GET /api/gastos/exportar — admin y observador, mismos filtros que la lista
+app.get('/api/gastos/exportar', requireRol('admin', 'observador'), async (req, res) => {
+  try {
+    const { q, params } = buildGastosQuery(req.query, scopeEdificio(req));
+    const { rows: gastos } = await pool.query(q, params);
+    const wb = construirWorkbookGastos(gastos);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="gastos_${new Date().toISOString().slice(0,10)}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
 // ── Usuarios asignables (para dropdown de tareas) ─────────────────────────────
 app.get('/api/usuarios/asignables', async (req, res) => {
   try {
@@ -587,6 +755,126 @@ app.put('/api/agentes/mover', requireRol('admin', 'it'), async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     error500(res, err);
+  }
+});
+
+// GET /api/agentes/edificios — resumen para la vista de edificios de Agentes:
+// cada edificio visible para el usuario con sus pisos y cuántos agentes tiene
+// cada uno. Usa la misma regla que el tablero (piso más frecuente de los
+// equipos del agente, sin BODEGA). Un usuario con edificio fijo ve solo el suyo.
+app.get('/api/agentes/edificios', async (req, res) => {
+  try {
+    const fijo = req.user.edificio_id;
+    const { rows: edificios } = await pool.query(
+      fijo != null ? 'SELECT id, nombre FROM edificios WHERE id = $1' : 'SELECT id, nombre FROM edificios ORDER BY nombre',
+      fijo != null ? [fijo] : []
+    );
+    const { rows: equipos } = await pool.query(
+      `SELECT edificio_id, piso, UPPER(TRIM(responsable)) AS agente FROM equipos
+       WHERE eliminado_en IS NULL AND responsable IS NOT NULL AND TRIM(responsable) != ''
+         AND piso IS NOT NULL AND piso != '' AND piso != 'BODEGA'`
+    );
+    // edificio -> agente -> piso -> cantidad de equipos
+    const conteo = new Map();
+    for (const e of equipos) {
+      if (!conteo.has(e.edificio_id)) conteo.set(e.edificio_id, new Map());
+      const porAgente = conteo.get(e.edificio_id);
+      if (!porAgente.has(e.agente)) porAgente.set(e.agente, new Map());
+      const pisos = porAgente.get(e.agente);
+      pisos.set(e.piso, (pisos.get(e.piso) || 0) + 1);
+    }
+    const resultado = edificios.map(ed => {
+      const porPiso = new Map();
+      for (const pisos of (conteo.get(ed.id) || new Map()).values()) {
+        let mejor = null, max = -1;
+        for (const [piso, n] of pisos) if (n > max) { mejor = piso; max = n; }
+        porPiso.set(mejor, (porPiso.get(mejor) || 0) + 1);
+      }
+      const pisos = [...porPiso].map(([piso, agentes]) => ({ piso, agentes })).sort((a, b) => a.piso.localeCompare(b.piso, 'es', { numeric: true }));
+      return { id: ed.id, nombre: ed.nombre, pisos, agentes: pisos.reduce((s, p) => s + p.agentes, 0) };
+    });
+    res.json(resultado);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// PUT /api/agentes/trasladar — mueve un agente (y sus equipos) a otro edificio,
+// o lo intercambia con un agente de ese edificio. Solo admin con alcance
+// global, porque toca dos edificios. Cada equipo que cambia de edificio o de
+// piso queda en el historial. Body: { agente, origen, destino, piso,
+// intercambiarCon? } — piso es el piso de destino del agente que se traslada;
+// en un intercambio, el otro agente toma el piso y la mesa que deja el primero.
+app.put('/api/agentes/trasladar', requireRol('admin'), async (req, res) => {
+  if (req.user.edificio_id != null) return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+  const { agente, piso, intercambiarCon } = req.body;
+  const origen = parseInt(req.body.origen), destino = parseInt(req.body.destino);
+  if (!agente?.trim() || !piso?.trim() || !Number.isInteger(origen) || !Number.isInteger(destino)) {
+    return res.status(400).json({ error: 'Faltan datos (agente, origen, destino, piso)' });
+  }
+  if (origen === destino) return res.status(400).json({ error: 'El edificio de destino debe ser distinto al de origen' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: eds } = await client.query('SELECT id, nombre FROM edificios WHERE id = ANY($1)', [[origen, destino]]);
+    const nombreEd = new Map(eds.map(e => [e.id, e.nombre]));
+    if (nombreEd.size !== 2) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Edificio no encontrado' }); }
+    const usuarioNombre = req.user.nombre || req.user.usuario;
+
+    // Mueve todos los equipos (no eliminados) de un agente a otro edificio y
+    // piso, registra cada cambio y devuelve el piso y la mesa que deja.
+    async function mover(nombre, desde, hacia, pisoNuevo, mesaNueva, nota) {
+      const key = nombre.trim().toUpperCase();
+      const { rows: equipos } = await client.query(
+        'SELECT id, id_activo, numero_serie, piso FROM equipos WHERE UPPER(TRIM(responsable)) = $1 AND edificio_id = $2 AND eliminado_en IS NULL',
+        [key, desde]
+      );
+      if (equipos.length === 0) throw Object.assign(new Error('sin equipos'), { status: 404, msg: `${nombre} no tiene equipos en ${nombreEd.get(desde)}` });
+      const { rows: [asiento] } = await client.query('SELECT mesa FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [key, desde]);
+      const pisoAnterior = equipos[0].piso;
+      for (const eq of equipos) {
+        const label = eq.id_activo || eq.numero_serie || String(eq.id);
+        await client.query('UPDATE equipos SET edificio_id = $1, piso = $2, updated_at = NOW() WHERE id = $3', [hacia, pisoNuevo, eq.id]);
+        const registrar = (campo, ant, nuevo) => client.query(
+          `INSERT INTO historial_equipos (equipo_id, equipo_label, usuario_id, usuario_nombre, campo, valor_ant, valor_nuevo, nota, edificio_id)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+          [eq.id, label, req.user.id, usuarioNombre, campo, ant, nuevo, nota, hacia]
+        );
+        await registrar('edificio', nombreEd.get(desde), nombreEd.get(hacia));
+        if (eq.piso !== pisoNuevo) await registrar('piso', eq.piso || '', pisoNuevo);
+      }
+      await client.query('DELETE FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [key, desde]);
+      if (mesaNueva != null) {
+        await client.query(
+          `INSERT INTO asientos_agentes (agente_nombre, agente_key, mesa, edificio_id) VALUES ($1,$2,$3,$4)
+           ON CONFLICT (agente_key, edificio_id) DO UPDATE SET mesa = $3, updated_at = NOW()`,
+          [nombre.trim(), key, mesaNueva, hacia]
+        );
+      }
+      return { piso: pisoAnterior, mesa: asiento?.mesa ?? null, equipos: equipos.length };
+    }
+
+    let resultado;
+    if (intercambiarCon?.trim()) {
+      const nota = `Intercambio: ${agente.trim()} ↔ ${intercambiarCon.trim()}`;
+      const keyB = intercambiarCon.trim().toUpperCase();
+      const { rows: [asientoB] } = await client.query('SELECT mesa FROM asientos_agentes WHERE agente_key = $1 AND edificio_id = $2', [keyB, destino]);
+      const a = await mover(agente, origen, destino, piso.trim(), asientoB?.mesa ?? null, nota);
+      const b = await mover(intercambiarCon, destino, origen, a.piso, a.mesa, nota);
+      resultado = { ok: true, intercambio: true, equipos: a.equipos + b.equipos };
+    } else {
+      const a = await mover(agente, origen, destino, piso.trim(), null, `Traslado de ${agente.trim()}`);
+      resultado = { ok: true, intercambio: false, equipos: a.equipos };
+    }
+    await client.query('COMMIT');
+    res.json(resultado);
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (err.status) return res.status(err.status).json({ error: err.msg });
+    error500(res, err);
+  } finally {
+    client.release();
   }
 });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario, getEdificios, createEdificio } from '../api';
 import { UserPlus, Pencil, Trash2, ShieldCheck, Wrench, Eye, Building2, Plus } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
+import { GrupoChip } from './Etiquetas';
 import './Usuarios.css';
 
 const ROL_LABEL = { admin: 'Admin', it: 'IT', observador: 'Observador' };
@@ -75,7 +76,7 @@ export default function Usuarios({ miId, refresh }) {
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {edificios.map(ed => (
-            <span key={ed.id} className="badge badge-green">{ed.nombre}</span>
+            <GrupoChip key={ed.id} edificio={ed.nombre} />
           ))}
           {edificios.length === 0 && <span className="text-muted">Sin edificios registrados todavía.</span>}
         </div>
@@ -255,7 +256,7 @@ function UsuarioModal({ mode, data, edificios, onClose, onSaved }) {
                 <input className="form-input" type="password" value={form.password}
                   onChange={e => set('password', e.target.value)}
                   placeholder={isEdit ? 'Dejar vacío para mantener' : 'Contraseña'} />
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Mínimo 8 caracteres.</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Mínimo 8 caracteres.</span>
               </div>
 
               <div className="form-group">

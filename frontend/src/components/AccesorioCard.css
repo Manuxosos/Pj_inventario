@@ -9,7 +9,7 @@
 }
 
 .accesorio-card-header h3 {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -17,12 +17,12 @@
 }
 
 .accesorio-vacio {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
 }
 
 .accesorio-error {
-  font-size: 12.5px;
+  font-size: 13.5px;
   color: var(--danger);
   margin: 6px 0 0;
 }
@@ -38,7 +38,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 13px;
+  font-size: 14px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
 }
@@ -54,14 +54,14 @@
 .accesorio-atributo {
   flex-shrink: 0;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
 .accesorio-cantidad {
   flex-shrink: 0;
   color: var(--neon-cyan);
-  font-size: 15px;
+  font-size: 17px;
   min-width: 24px;
   text-align: right;
 }
@@ -86,10 +86,21 @@
 .accesorio-grupo:last-child { margin-bottom: 0; }
 
 .accesorio-grupo-titulo {
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
   font-weight: 700;
-  color: var(--neon-cyan);
+  color: var(--text);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: 0 0 8px;
 }
+
+.accesorio-cantidad-cero {
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+.accesorio-atributo { display: inline-flex; align-items: center; gap: 4px; }

@@ -19,6 +19,15 @@ textarea:focus-visible {
   --neon-amber:   #ffb800;
   --neon-pink:    #ff3d7f;
 
+  /* Estados de equipo — reservados: solo se usan para el estado, siempre
+     con icono y texto (ver src/semantica.js). Validados entre sí y contra
+     el cian de la marca para daltonismo protan/deutan. */
+  --estado-uso:        #4f8dff;
+  --estado-disponible: #00d683;
+  --estado-revision:   #f5a800;
+  --estado-baja:       #ff3d7f;
+  --estado-sin:        #5a8fb3;
+
   --primary:       var(--neon-cyan);
   --primary-dark:  #00c8d4;
   --primary-glow:  rgba(0, 245, 255, 0.18);
@@ -48,14 +57,36 @@ textarea:focus-visible {
   --section-title-bg: #001a2e;
   --view-value-bg:    #060e18;
   --shadow: 0 2px 12px rgba(0,0,0,0.5);
+
+  /* Tipografía (ver manual de marca) */
+  --font-display: 'Space Grotesk', 'Inter', 'Segoe UI', sans-serif;
+  --font-body:    'Inter', 'Segoe UI', Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  /* Vidrio: superficies translúcidas sobre el fondo molecular */
+  --glass-bg:        rgba(10, 22, 42, 0.38);
+  --glass-bg-strong: rgba(6, 14, 30, 0.7);
+  --glass-border:    rgba(150, 225, 255, 0.14);
+  --glass-blur:      blur(20px) saturate(180%);
+  --glass-highlight: linear-gradient(180deg, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.015) 30%, rgba(255,255,255,0) 60%);
+  /* Profundidad abajo + filo de neón cian arriba + reflejo interno */
+  --glass-shadow:    0 12px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(0, 245, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+
+  /* Movimiento */
+  --ease-out:   cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-rapida: 140ms;
+  --dur-media:  240ms;
+  --dur-lenta:  420ms;
 }
 
 body {
-  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
-  font-size: 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* Fondo con grid sutil */
@@ -64,8 +95,8 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0,245,255,0.025) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0,245,255,0.025) 1px, transparent 1px);
+    linear-gradient(rgba(0,245,255,0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,245,255,0.018) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
   z-index: 0;
@@ -75,3 +106,7 @@ body::before {
 button { cursor: pointer; font-family: inherit; }
 input, select, textarea { font-family: inherit; }
 a { color: var(--primary); text-decoration: none; }
+
+/* Títulos y números con la tipografía de marca */
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.01em; }
+.mono, code, kbd { font-family: var(--font-mono); }

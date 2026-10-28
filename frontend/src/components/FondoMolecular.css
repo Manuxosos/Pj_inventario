@@ -1,0 +1,45 @@
+.fondo-molecular {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fondo-molecular canvas {
+  position: absolute;
+  inset: 0;
+}
+
+/* Manchas de luz lentas: le dan algo que "refractar" al vidrio de las
+   tarjetas. Muy tenues para no competir con el contenido. */
+.fondo-aurora {
+  position: absolute;
+  inset: -20%;
+  background:
+    radial-gradient(38% 34% at 12% 18%, rgba(0, 245, 255, 0.16), transparent 70%),
+    radial-gradient(34% 30% at 88% 26%, rgba(191, 95, 255, 0.15), transparent 70%),
+    radial-gradient(42% 38% at 62% 92%, rgba(0, 120, 255, 0.12), transparent 70%),
+    radial-gradient(26% 22% at 40% 55%, rgba(255, 61, 200, 0.05), transparent 70%);
+  filter: blur(24px);
+  animation: aurora-deriva 40s ease-in-out infinite alternate;
+}
+
+/* Líneas de escaneo y viñeta: textura de pantalla cyberpunk, apenas visible */
+.fondo-molecular::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 3px),
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+@keyframes aurora-deriva {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(3%, -2%, 0) scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fondo-aurora { animation: none; }
+}

@@ -229,6 +229,48 @@ async function initSchema() {
   await pool.query('UPDATE historial_equipos SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
   await pool.query('UPDATE asientos_agentes SET edificio_id = $1 WHERE edificio_id IS NULL', [japonId]);
 
+  // Bitácora de servicios realizados por IT (Tickets): registro de lo que
+  // un IT ya hizo (no una cola de pendientes como Tareas). No se edita una
+  // vez creado, solo se puede borrar un registro cargado por error.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tickets (
+      id             SERIAL PRIMARY KEY,
+      categoria      TEXT NOT NULL,
+      descripcion    TEXT NOT NULL DEFAULT '',
+      usuario_id     INTEGER,
+      usuario_nombre TEXT NOT NULL DEFAULT '',
+      edificio_id    INTEGER REFERENCES edificios(id),
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_categoria_check`);
+  await pool.query(`ALTER TABLE tickets ADD CONSTRAINT tickets_categoria_check CHECK (categoria IN ('accesorio','instalacion','reparacion','soporte','otro'))`);
+
+  // Gastos mensuales de IT (compras, suscripciones). Reemplaza el control en
+  // Excel de una hoja por mes: acá es una sola lista filtrable por mes, con
+  // edificio real (FK) en vez de texto libre, y "cantidad" separado de
+  // "proveedor" (en el Excel original a veces se mezclaban ambos).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS gastos (
+      id             SERIAL PRIMARY KEY,
+      edificio_id    INTEGER NOT NULL REFERENCES edificios(id),
+      fecha          DATE NOT NULL,
+      concepto       TEXT NOT NULL,
+      proveedor      TEXT NOT NULL DEFAULT '',
+      cantidad       INTEGER,
+      monto          NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (monto >= 0),
+      periodicidad   TEXT NOT NULL DEFAULT 'unico',
+      estado         TEXT NOT NULL DEFAULT 'activo',
+      usuario_id     INTEGER,
+      usuario_nombre TEXT NOT NULL DEFAULT '',
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE gastos DROP CONSTRAINT IF EXISTS gastos_periodicidad_check`);
+  await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_periodicidad_check CHECK (periodicidad IN ('mensual','anual','unico','segun_necesidad'))`);
+  await pool.query(`ALTER TABLE gastos DROP CONSTRAINT IF EXISTS gastos_estado_check`);
+  await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_estado_check CHECK (estado IN ('activo','cancelado','pendiente'))`);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {

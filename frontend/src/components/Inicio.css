@@ -1,0 +1,67 @@
+.inicio { max-width: 1120px; margin: 0 auto; padding: 20px 24px 48px; }
+.inicio-top { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-bottom: 12px; }
+
+.inicio-hero { text-align: center; margin-bottom: 36px; }
+.inicio-logo { display: inline-flex; align-items: center; gap: 14px; color: var(--neon-cyan); }
+.inicio-logo h1 { font-family: var(--font-display); margin: 0; font-size: 54px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+.inicio-logo h1 span { color: var(--neon-cyan); text-shadow: 0 0 24px rgba(0, 245, 255, 0.45); }
+.inicio-slogan { margin: 14px 0 6px; font-size: 20px; font-weight: 600; color: var(--text); }
+.inicio-sub { margin: 0; font-size: 16px; color: var(--text-muted); }
+.inicio-sub strong { color: var(--text); }
+
+.inicio-zonas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+
+.inicio-zona {
+  --zona: var(--neon-cyan);
+  background: var(--glass-highlight), var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top: 2px solid var(--zona);
+  border-radius: 18px;
+  padding: 24px;
+  box-shadow: 0 -10px 40px -24px var(--zona);
+}
+/* Violeta para BLACK ZONE: el rosa queda reservado al estado "De baja" */
+.inicio-zona-black { --zona: var(--neon-purple); }
+.inicio-zona header { margin-bottom: 20px; }
+.inicio-zona-tag { color: var(--zona); font-weight: 800; letter-spacing: 0.2em; font-size: 17px; }
+.inicio-zona header p { margin: 6px 0 0; font-size: 14px; color: var(--text-muted); }
+
+.inicio-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.inicio-tile {
+  position: relative;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 4px;
+  min-height: 118px; padding: 20px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit; text-align: left; cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+.inicio-tile svg { color: var(--zona); margin-bottom: 8px; }
+.inicio-tile b { font-size: 18px; }
+.inicio-tile small { font-size: 13px; color: var(--text-muted); }
+.inicio-tile-ancho { grid-column: span 2; }
+.inicio-tile:hover:not(:disabled) {
+  border-color: var(--zona);
+  background: color-mix(in srgb, var(--zona) 7%, transparent);
+  transform: translateY(-2px);
+}
+.inicio-tile:focus-visible { outline: 2px solid var(--zona); outline-offset: 2px; }
+.inicio-tile:disabled { cursor: default; opacity: 0.55; }
+.inicio-pronto {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--zona); border: 1px solid var(--zona); border-radius: 999px; padding: 2px 8px;
+}
+
+@media (max-width: 860px) {
+  .inicio-zonas { grid-template-columns: 1fr; }
+  .inicio-logo h1 { font-size: 41px; }
+}
+@media (max-width: 480px) {
+  .inicio-tiles { grid-template-columns: 1fr; }
+  .inicio-tile-ancho { grid-column: auto; }
+}

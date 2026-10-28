@@ -1,9 +1,9 @@
-// Misma paleta que usa el Dashboard para gráficas, aplicada acá para que
-// cada agente tenga un color distinto y consistente en toda la app.
-const PALETA = ['#00e5ff', '#00e676', '#ffca28', '#ce93d8', '#f48fb1', '#82b1ff', '#ffab40'];
+// Color de la persona (avatar del usuario y ficha del agente). Antes salía
+// de la misma paleta que los estados, y un agente "verde" se confundía con
+// "Disponible". Ahora las personas usan el cian de la marca; el estado de su
+// equipo se muestra aparte, con su color e icono reservados (semantica.js).
+const COLOR_PERSONA = '#00f5ff';
 
-export function colorAgente(nombre) {
-  let hash = 0;
-  for (let i = 0; i < nombre.length; i++) hash = (hash * 31 + nombre.charCodeAt(i)) >>> 0;
-  return PALETA[hash % PALETA.length];
+export function colorAgente() {
+  return COLOR_PERSONA;
 }

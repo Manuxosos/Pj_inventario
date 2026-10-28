@@ -19,7 +19,7 @@ export default function ConfirmModal({ title, message, confirmLabel = 'Eliminar'
           <button className="modal-close" onClick={onCancel} aria-label="Cerrar">✕</button>
         </div>
         <div className="modal-body" style={{ gap: 20 }}>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>{message}</p>
+          <p style={{ fontSize: 16, color: 'var(--text-muted)', margin: 0 }}>{message}</p>
           <div className="modal-footer">
             <button className="btn btn-secondary" onClick={onCancel}>Cancelar</button>
             <button className="btn btn-danger" onClick={onConfirm}>{confirmLabel}</button>

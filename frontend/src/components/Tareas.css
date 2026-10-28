@@ -10,14 +10,14 @@
 }
 
 .tareas-title {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: var(--neon-cyan);
   margin: 0 0 4px;
   text-shadow: 0 0 12px rgba(0,245,255,0.35);
 }
 
-.tareas-sub { font-size: 13px; color: var(--text-muted); }
+.tareas-sub { font-size: 14px; color: var(--text-muted); }
 
 /* ── Kanban ── */
 .kanban {
@@ -39,7 +39,7 @@
   gap: 7px;
   padding: 8px 12px;
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -50,7 +50,7 @@
   background: rgba(255,255,255,0.1);
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .est-pending { background: rgba(255,184,0,0.12); color: var(--neon-amber);  border: 1px solid rgba(255,184,0,0.25); }
@@ -61,7 +61,7 @@
 .kanban-cards { display: flex; flex-direction: column; gap: 10px; }
 
 .kanban-empty {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   text-align: center;
   padding: 20px 0;
@@ -91,7 +91,7 @@
 }
 
 .tarea-titulo {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   line-height: 1.4;
@@ -101,7 +101,7 @@
 .tarea-actions { display: flex; gap: 4px; flex-shrink: 0; }
 
 .tarea-desc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   line-height: 1.5;
 }
@@ -109,7 +109,7 @@
 .tarea-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .tarea-tag {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 999px;
@@ -138,7 +138,7 @@
 }
 
 .tarea-fecha {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   opacity: 0.6;
 }

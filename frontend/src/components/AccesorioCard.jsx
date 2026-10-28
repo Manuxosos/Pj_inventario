@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Pencil, Trash2, X, Check } from 'lucide-react';
+import { Pencil, Trash2, X, Check, Bluetooth, Usb } from 'lucide-react';
+import { IconoEdificio } from '../semantica';
 import { getAccesorios, crearAccesorio, actualizarAccesorio, eliminarAccesorio } from '../api';
 import './AccesorioCard.css';
 
@@ -18,6 +19,22 @@ import './AccesorioCard.css';
 // tiene un segundo campo distintivo además de modelo/cantidad (hoy solo
 // audífonos, con el tipo de conexión). Si no se pasa, el formulario y la
 // tabla se reducen a modelo + cantidad.
+// Icono del tipo de conexión de los audífonos.
+const ICONO_ATRIBUTO = { bluetooth: Bluetooth, 'usb_2.4ghz': Usb };
+
+function Atributo({ valor, label }) {
+  const Icon = ICONO_ATRIBUTO[valor];
+  return <span className="accesorio-atributo">{Icon && <Icon size={11} />} {label}</span>;
+}
+
+// Cantidad: sin stock (0) se apaga y se marca, para no confundirla con un
+// modelo disponible.
+function Cantidad({ n }) {
+  return n > 0
+    ? <strong className="accesorio-cantidad">{n}</strong>
+    : <strong className="accesorio-cantidad accesorio-cantidad-cero" title="Sin stock">0</strong>;
+}
+
 export default function AccesorioCard({ categoria, titulo, Icono, atributoOptions, rol, esGlobal, edificioSel, refresh }) {
   const puedeEditar = rol === 'admin' || rol === 'it';
   const mostrarTodos = esGlobal && edificioSel == null;
@@ -138,8 +155,8 @@ export default function AccesorioCard({ categoria, titulo, Icono, atributoOption
     return (
       <li key={item.id} className="accesorio-fila">
         <span className="accesorio-modelo">{item.modelo}</span>
-        {tieneAtributo && <span className="accesorio-atributo">{atributoLabelDe(item.atributo)}</span>}
-        <strong className="accesorio-cantidad">{item.cantidad}</strong>
+        {tieneAtributo && <Atributo valor={item.atributo} label={atributoLabelDe(item.atributo)} />}
+        <Cantidad n={item.cantidad} />
         {puedeEditar && (
           <span className="accesorio-acciones">
             <button className="btn btn-ghost btn-sm" onClick={() => empezarEditar(item)} title="Editar" aria-label="Editar">
@@ -174,13 +191,13 @@ export default function AccesorioCard({ categoria, titulo, Icono, atributoOption
             }, {})
           ).map(([edificio, filas]) => (
             <div key={edificio} className="accesorio-grupo">
-              <h4 className="accesorio-grupo-titulo">{edificio}</h4>
+              <h4 className="accesorio-grupo-titulo"><IconoEdificio size={12} /> {edificio}</h4>
               <ul className="accesorio-lista">
                 {filas.map(it => (
                   <li key={it.id} className="accesorio-fila accesorio-fila-solo-lectura">
                     <span className="accesorio-modelo">{it.modelo}</span>
-                    {tieneAtributo && <span className="accesorio-atributo">{atributoLabelDe(it.atributo)}</span>}
-                    <strong className="accesorio-cantidad">{it.cantidad}</strong>
+                    {tieneAtributo && <Atributo valor={it.atributo} label={atributoLabelDe(it.atributo)} />}
+                    <Cantidad n={it.cantidad} />
                   </li>
                 ))}
               </ul>

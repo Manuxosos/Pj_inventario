@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4, Headphones, Monitor, Smartphone } from 'lucide-react';
+import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4, Headphones, Monitor, Smartphone, Laptop } from 'lucide-react';
+import { metaEstado } from '../semantica';
+import { EstadoBadge, GrupoChip } from './Etiquetas';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
 import AccesorioCard from './AccesorioCard';
@@ -27,16 +29,6 @@ const COLUMNAS = [
 
 const ESTADOS = ['En uso', 'Disponible', 'En revisión', 'De baja'];
 
-const ESTADO_BADGE = {
-  'En uso':       'badge-blue',
-  'Disponible':   'badge-green',
-  'En revisión':  'badge-yellow',
-  'De baja':      'badge-red',
-};
-
-function getBadgeClass(estado) {
-  return ESTADO_BADGE[estado] || 'badge-gray';
-}
 
 const ACCESORIO_LABEL = {
   cargador: 'Cargador', mouse: 'Mouse', audifonos: 'Audífonos',
@@ -280,41 +272,30 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
 
       {/* Stats — siempre totales globales. Click filtra la tabla por estado. */}
       <div className="stats-row">
-        <div
-          className={`stat-card card stat-card-clickable ${!filters.estado ? 'stat-card-active' : ''}`}
-          onClick={() => setFilters(f => ({ ...f, estado: '', estadoIn: '' }))}
-        >
-          <span className="stat-num">{todos.length}</span>
-          <span className="stat-label">Total Equipos</span>
-        </div>
-        <div
-          className={`stat-card card stat-card-clickable ${filters.estado === 'En uso' ? 'stat-card-active' : ''}`}
-          onClick={() => setFilters(f => ({ ...f, estado: 'En uso', estadoIn: '' }))}
-        >
-          <span className="stat-num">{enUso}</span>
-          <span className="stat-label">En Uso</span>
-        </div>
-        <div
-          className={`stat-card card stat-card-clickable ${filters.estado === 'Disponible' ? 'stat-card-active' : ''}`}
-          onClick={() => setFilters(f => ({ ...f, estado: 'Disponible', estadoIn: '' }))}
-        >
-          <span className="stat-num">{disponibles}</span>
-          <span className="stat-label">Disponibles</span>
-        </div>
-        <div
-          className={`stat-card card stat-card-clickable ${filters.estado === 'En revisión' ? 'stat-card-active' : ''}`}
-          onClick={() => setFilters(f => ({ ...f, estado: 'En revisión', estadoIn: '' }))}
-        >
-          <span className="stat-num">{enRevision}</span>
-          <span className="stat-label">En Revisión</span>
-        </div>
-        <div
-          className={`stat-card card stat-card-clickable ${filters.estado === 'De baja' ? 'stat-card-active' : ''}`}
-          onClick={() => setFilters(f => ({ ...f, estado: 'De baja', estadoIn: '' }))}
-        >
-          <span className="stat-num">{deBaja}</span>
-          <span className="stat-label">De Baja</span>
-        </div>
+        {[
+          { estado: '',            num: todos.length, label: 'Total Equipos' },
+          { estado: 'En uso',      num: enUso,        label: 'En Uso' },
+          { estado: 'Disponible',  num: disponibles,  label: 'Disponibles' },
+          { estado: 'En revisión', num: enRevision,   label: 'En Revisión' },
+          { estado: 'De baja',     num: deBaja,       label: 'De Baja' },
+        ].map(({ estado, num, label }) => {
+          // El total usa el cian de la marca; cada estado, su color e icono reservados.
+          const meta = estado ? metaEstado(estado) : { color: 'var(--neon-cyan)', Icon: Laptop, desc: 'Todos los equipos' };
+          const activo = (filters.estado || '') === estado;
+          return (
+            <div
+              key={label}
+              className={`stat-card card stat-card-clickable ${activo ? 'stat-card-active' : ''}`}
+              style={{ '--c': meta.color }}
+              title={meta.desc}
+              onClick={() => setFilters(f => ({ ...f, estado, estadoIn: '' }))}
+            >
+              <span className="stat-icon"><meta.Icon size={16} /></span>
+              <span className="stat-num">{num}</span>
+              <span className="stat-label">{label}</span>
+            </div>
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -442,7 +423,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
                     </td>
                   )}
                   <td><span className="id-badge">{eq.id_activo || '—'}</span></td>
-                  <td className="text-muted">{eq.piso || '—'}</td>
+                  <td>{eq.piso ? <GrupoChip piso={eq.piso} /> : <span className="text-muted">—</span>}</td>
                   <td className="model-cell">{eq.marca_modelo || '—'}</td>
                   <td className="text-muted small">{eq.procesador || '—'}</td>
                   <td>{eq.ram || '—'}</td>
@@ -450,7 +431,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
                   <td className="mono text-muted small">{eq.numero_serie || '—'}</td>
                   <td>
                     {eq.estado
-                      ? <span className={`badge ${getBadgeClass(eq.estado)}`}>{eq.estado}</span>
+                      ? <EstadoBadge estado={eq.estado} />
                       : <span className="text-muted">—</span>
                     }
                   </td>

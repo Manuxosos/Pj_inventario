@@ -2,7 +2,7 @@
 
 .dash-loading {
   text-align: center; padding: 80px;
-  color: var(--text-muted); font-size: 15px;
+  color: var(--text-muted); font-size: 17px;
 }
 
 /* KPIs */
@@ -13,10 +13,12 @@
 }
 
 .kpi-card {
-  border-radius: 10px;
+  border-radius: 14px;
   padding: 20px 14px 16px;
   display: flex; flex-direction: column; align-items: center; gap: 6px;
-  background: var(--surface);
+  background: var(--glass-highlight), var(--glass-bg);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border: 1px solid;
   transition: box-shadow 0.2s, transform 0.2s;
   position: relative;
@@ -31,8 +33,8 @@
 .kpi-card:hover { transform: translateY(-2px); }
 
 .kpi-icon { margin-bottom: 2px; }
-.kpi-num  { font-size: 36px; font-weight: 800; line-height: 1; }
-.kpi-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; text-align: center; }
+.kpi-num  { font-family: var(--font-display); letter-spacing: -0.02em; font-size: 39px; font-weight: 800; line-height: 1; }
+.kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.75; text-align: center; }
 
 .kpi-cyan   {
   border-color: rgba(0,245,255,0.2);
@@ -128,7 +130,7 @@
 }
 
 .dash-card-title {
-  font-size: 12px; font-weight: 700;
+  font-size: 13px; font-weight: 700;
   color: var(--neon-cyan);
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -144,11 +146,13 @@
   border: 1px solid rgba(0,245,255,0.2);
   border-radius: 6px;
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   box-shadow: 0 0 20px rgba(0,245,255,0.1);
 }
 .tooltip-label { font-weight: 600; margin-bottom: 4px; color: var(--neon-cyan); }
+.chart-tooltip p { display: flex; align-items: center; gap: 6px; margin: 0; }
+.chart-tooltip .legend-dot { flex-shrink: 0; }
 
 /* Legend custom */
 .custom-legend {
@@ -171,12 +175,12 @@
   flex-shrink: 0;
 }
 .legend-text {
-  font-size: 11px;
+  font-size: 12px;
   color: #94a3b8;
 }
 
 .dash-card-hint {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   margin: -8px 0 8px;
   opacity: 0.6;
@@ -197,7 +201,7 @@
 }
 
 .dash-ver-todo {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--neon-cyan);
   background: transparent;
   border: 1px solid rgba(0,245,255,0.2);
@@ -256,19 +260,19 @@
 }
 
 .dash-feed-equipo {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--neon-cyan);
 }
 
 .dash-feed-serie {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .dash-feed-piso {
-  font-size: 10px;
+  font-size: 11px;
   padding: 0 6px;
   border-radius: 999px;
   background: rgba(58,106,136,0.15);
@@ -277,7 +281,7 @@
 }
 
 .dash-feed-time {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   margin-left: auto;
   white-space: nowrap;
@@ -288,20 +292,37 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .dash-feed-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-weight: 600;
   color: var(--text);
 }
+.dash-feed-campo svg { color: var(--neon-cyan); opacity: 0.8; }
+.dash-feed-flecha { color: var(--text-muted); flex-shrink: 0; }
+
+/* Creación / eliminación / restauración: usan el color del estado que
+   resulta (Disponible o De baja), con su icono. */
+.dash-feed-evento {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  color: var(--c);
+}
 
 .dash-feed-ant {
-  color: var(--neon-pink);
-  background: rgba(255,61,127,0.08);
+  color: var(--text-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(90,143,179,0.6);
+  background: rgba(58,106,136,0.1);
   padding: 0 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -309,11 +330,13 @@
 }
 
 .dash-feed-nuevo {
-  color: var(--neon-green);
-  background: rgba(0,255,157,0.08);
+  color: var(--text);
+  font-weight: 600;
+  background: rgba(0,245,255,0.08);
+  border: 1px solid rgba(0,245,255,0.18);
   padding: 0 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -321,13 +344,27 @@
 }
 
 .dash-feed-nota {
-  font-size: 10px;
-  color: var(--neon-amber);
+  font-size: 11px;
+  color: var(--text-muted);
   font-style: italic;
   opacity: 0.85;
 }
 
 .dash-feed-usuario {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
 }
+
+@media (max-width: 900px) {
+  .dash-row-2col { grid-template-columns: 1fr; }
+}
+
+/* KPI con tono: el color llega por --c (cian para el total, el color
+   reservado del estado para el resto). */
+.kpi-tono {
+  border-color: color-mix(in srgb, var(--c) 22%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--c) 8%, transparent), inset 0 0 20px color-mix(in srgb, var(--c) 3%, transparent);
+  color: var(--c);
+}
+.kpi-tono::before { background: var(--c); box-shadow: 0 0 8px var(--c); }
+.kpi-tono:hover { box-shadow: 0 0 30px color-mix(in srgb, var(--c) 20%, transparent); }

@@ -1,0 +1,17 @@
+/* Edificio isométrico: vidrio cian de la marca, ventanas encendidas */
+.edificio-iso { display: block; overflow: visible; }
+.iso-sombra   { fill: rgba(0, 0, 0, 0.45); filter: blur(3px); }
+.iso-cara-izq { fill: rgba(0, 245, 255, 0.10); stroke: rgba(0, 245, 255, 0.55); stroke-width: 0.6; }
+.iso-cara-der { fill: rgba(0, 245, 255, 0.04); stroke: rgba(0, 245, 255, 0.35); stroke-width: 0.6; }
+.iso-techo    { fill: rgba(0, 245, 255, 0.18); stroke: rgba(0, 245, 255, 0.8); stroke-width: 0.7; }
+.iso-ventana  { fill: rgba(0, 245, 255, 0.10); }
+.iso-ventana.on { fill: rgba(140, 245, 255, 0.75); }
+.iso-antena   { stroke: rgba(0, 245, 255, 0.7); stroke-width: 0.8; stroke-linecap: round; }
+
+.iso-piso { transition: transform var(--dur-media) var(--ease-out); }
+
+/* Activo / hover: los pisos se separan levemente y las ventanas brillan */
+.edificio-iso-activo .iso-ventana.on,
+.edificio-card:hover .iso-ventana.on { fill: rgba(190, 252, 255, 0.95); filter: drop-shadow(0 0 1.5px rgba(0, 245, 255, 0.9)); }
+.edificio-card:hover .iso-piso { transform: translateY(calc(var(--i) * -1.6px)); }
+.edificio-card:hover .iso-techo { transform: translateY(calc(var(--pisos, 0) * -1.6px)); }

@@ -41,7 +41,7 @@ export default function Login({ onLogin }) {
           <div className="login-icon-wrap">
             <Package size={32} color="#06b6d4" />
           </div>
-          <h1>Inventario IT</h1>
+          <h1>OfficeTech</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
