@@ -236,6 +236,121 @@
   padding-top: 8px;
 }
 
+/* ── Tarjetas de totales/resumen (.stat-card) ──
+   Vive acá, en el CSS que carga siempre desde el arranque, y no en el CSS
+   de una pantalla puntual (ej. EquiposList), porque Gastos también las
+   usa y por el code splitting por pestaña no hay garantía de qué CSS ya
+   cargó. Si una tarjeta de totales se ve sin estilo (texto chico, sin
+   color), es señal de que estas clases se movieron a un CSS que no
+   carga siempre. */
+.stat-card {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  --c: var(--neon-cyan);
+}
+
+.stat-card-clickable {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.stat-card-clickable:hover {
+  border-color: color-mix(in srgb, var(--c) 35%, transparent);
+  transform: translateY(-1px);
+}
+.stat-card-active {
+  border-color: color-mix(in srgb, var(--c) 55%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--c) 18%, transparent), inset 0 0 16px color-mix(in srgb, var(--c) 6%, transparent);
+}
+
+.stat-icon { color: var(--c); filter: drop-shadow(0 0 4px var(--c)); line-height: 0; }
+.stat-num { font-family: var(--font-display); letter-spacing: -0.02em; font-size: 35px; font-weight: 800; color: var(--c); line-height: 1; text-shadow: 0 0 14px color-mix(in srgb, var(--c) 50%, transparent); }
+.stat-label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── Tabla genérica y utilitarios de texto (.equip-table, .text-muted, etc.) ──
+   Mismo motivo que arriba: Gastos.jsx reutiliza la tabla y los
+   utilitarios de EquiposList.jsx. */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+.table-loading, .table-empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.equip-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.equip-table thead tr {
+  background: var(--table-header-bg);
+  border-bottom: 2px solid var(--border);
+}
+
+.equip-table th {
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+.sortable-th {
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.15s;
+}
+.sortable-th:hover { opacity: 1; }
+
+.th-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.th-sort-idle { opacity: 0.4; }
+
+.equip-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.equip-table-compacta th { padding: 6px 14px; }
+.equip-table-compacta td { padding: 4px 14px; font-size: 13.5px; }
+
+.equip-row { transition: background 0.15s; }
+.equip-row:hover { background: var(--table-hover); }
+.equip-row:last-child td { border-bottom: none; }
+.equip-row-selected { background: rgba(0,245,255,0.05); }
+
+.model-cell { font-weight: 500; }
+.text-muted { color: var(--text-muted); }
+.small { font-size: 13px; }
+.mono { font-family: 'Consolas', 'Courier New', monospace; }
+
+.actions-cell {
+  display: flex;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.danger-btn:hover { color: var(--danger) !important; border-color: var(--danger) !important; }
+
 /* ── Logout icon ── */
 .btn-icon-neon {
   background: transparent;

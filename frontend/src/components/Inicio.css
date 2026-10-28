@@ -9,7 +9,7 @@
 .inicio-sub { margin: 0; font-size: 16px; color: var(--text-muted); }
 .inicio-sub strong { color: var(--text); }
 
-.inicio-zonas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.inicio-zonas { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
 
 .inicio-zona {
   --zona: var(--neon-cyan);
