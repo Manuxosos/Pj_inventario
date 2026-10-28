@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, LayoutDashboard, ClipboardList, Users, CheckSquare, Ticket, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
+import { Home, LayoutDashboard, ClipboardList, Users, CheckSquare, Ticket, Wallet, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
 import Login from './components/Login';
 import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
@@ -17,6 +17,7 @@ const Dashboard    = lazy(() => import('./components/Dashboard'));
 const Usuarios     = lazy(() => import('./components/Usuarios'));
 const Tareas       = lazy(() => import('./components/Tareas'));
 const Tickets      = lazy(() => import('./components/Tickets'));
+const Gastos       = lazy(() => import('./components/Gastos'));
 const Agentes      = lazy(() => import('./components/Agentes'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 
@@ -212,6 +213,9 @@ export default function App() {
             <NavLink to="/tickets" className={navClass} onClick={cerrarMenu}>
               <Ticket size={16} /> Tickets
             </NavLink>
+            <NavLink to="/gastos" className={navClass} onClick={cerrarMenu}>
+              <Wallet size={16} /> Gastos
+            </NavLink>
           </div>
 
           <div className="sidebar-grupo">
@@ -329,6 +333,9 @@ export default function App() {
         )} />
         <Route path="/tareas" element={seccion(<Tareas rol={rol} miId={userInfo?.id} refresh={refresh} />)} />
         <Route path="/tickets" element={seccion(<Tickets rol={rol} refresh={refresh} />)} />
+        <Route path="/gastos" element={seccion(
+          <Gastos rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} edificios={edificios} refresh={refresh} showToast={showToast} />
+        )} />
         <Route path="/agentes" element={seccion(
           <Agentes
             rol={rol}

@@ -10,6 +10,7 @@ require('dotenv').config();
 const { pool, initPromise } = require('./database');
 const { login, verificarToken } = require('./auth');
 const { construirWorkbookInventario } = require('./excelInventario');
+const { construirWorkbookGastos } = require('./excelGastos');
 
 const app = express();
 
@@ -492,6 +493,113 @@ app.delete('/api/tickets/:id', requireRol('admin'), async (req, res) => {
     const { rows } = await pool.query(q, params);
     if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
     res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// ── Gastos mensuales de IT (compras, suscripciones) ─────────────────────────
+const GASTO_PERIODICIDADES = ['mensual', 'anual', 'unico', 'segun_necesidad'];
+const GASTO_ESTADOS = ['activo', 'cancelado', 'pendiente'];
+
+function buildGastosQuery(query, edificioId) {
+  const { params, add } = mkParams();
+  let q = `SELECT g.*, e.nombre AS edificio_nombre FROM gastos g JOIN edificios e ON e.id = g.edificio_id WHERE 1=1`;
+  if (edificioId != null) q += ` AND g.edificio_id = ${add(edificioId)}`;
+  if (query.mes && /^\d{4}-\d{2}$/.test(query.mes)) {
+    q += ` AND to_char(g.fecha, 'YYYY-MM') = ${add(query.mes)}`;
+  }
+  q += ' ORDER BY g.fecha DESC, g.id DESC';
+  return { q, params };
+}
+
+function validarGasto(body) {
+  if (!body.fecha) return 'La fecha es obligatoria';
+  if (!body.concepto?.trim()) return 'El concepto es obligatorio';
+  const monto = parseFloat(body.monto);
+  if (!Number.isFinite(monto) || monto < 0) return 'El monto debe ser un número mayor o igual a 0';
+  if (!GASTO_PERIODICIDADES.includes(body.periodicidad)) return 'Periodicidad inválida';
+  if (!GASTO_ESTADOS.includes(body.estado)) return 'Estado inválido';
+  if (body.cantidad != null && body.cantidad !== '' && !Number.isInteger(parseInt(body.cantidad))) {
+    return 'La cantidad debe ser un número entero';
+  }
+  return null;
+}
+
+app.get('/api/gastos', async (req, res) => {
+  try {
+    const { q, params } = buildGastosQuery(req.query, scopeEdificio(req));
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.post('/api/gastos', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const edificioId = req.user.edificio_id != null ? req.user.edificio_id : parseInt(req.body.edificio_id);
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
+    const error = validarGasto(req.body);
+    if (error) return res.status(400).json({ error });
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
+    const { rows } = await pool.query(
+      `INSERT INTO gastos (edificio_id, fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [edificioId, fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado,
+       req.user.id, req.user.nombre || req.user.usuario]
+    );
+    res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.put('/api/gastos/:id', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const error = validarGasto(req.body);
+    if (error) return res.status(400).json({ error });
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
+    const params = [fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado, req.params.id];
+    let q = `UPDATE gastos SET fecha=$1, concepto=$2, proveedor=$3, cantidad=$4, monto=$5, periodicidad=$6, estado=$7 WHERE id=$8`;
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+app.delete('/api/gastos/:id', requireRol('admin'), async (req, res) => {
+  try {
+    const scope = scopeEdificio(req);
+    const params = [req.params.id];
+    let q = 'DELETE FROM gastos WHERE id = $1';
+    if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
+    q += ' RETURNING id';
+    const { rows } = await pool.query(q, params);
+    if (!rows[0]) return res.status(404).json({ error: 'No encontrado' });
+    res.json({ ok: true });
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// GET /api/gastos/exportar — admin y observador, mismos filtros que la lista
+app.get('/api/gastos/exportar', requireRol('admin', 'observador'), async (req, res) => {
+  try {
+    const { q, params } = buildGastosQuery(req.query, scopeEdificio(req));
+    const { rows: gastos } = await pool.query(q, params);
+    const wb = construirWorkbookGastos(gastos);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="gastos_${new Date().toISOString().slice(0,10)}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
   } catch (err) {
     error500(res, err);
   }

@@ -13,7 +13,7 @@ const ZONAS = [
       { tab: 'tareas',    titulo: 'Tareas',    detalle: 'Pendientes del equipo IT',            Icono: CheckSquare },
       { tab: 'tickets',   titulo: 'Tickets',   detalle: 'Bitácora de servicios IT',            Icono: Ticket },
       { tab: 'dashboard', titulo: 'Dashboard', detalle: 'Indicadores de equipos e inventario', Icono: LayoutDashboard, ancho: true },
-      { tab: null,        titulo: 'Gastos',    detalle: 'Compras y presupuesto IT',            Icono: Wallet, ancho: true },
+      { tab: 'gastos',    titulo: 'Gastos',    detalle: 'Compras y presupuesto IT',            Icono: Wallet, ancho: true },
     ],
   },
   {

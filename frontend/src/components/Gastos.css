@@ -1,0 +1,43 @@
+.gastos-page { padding: 0; }
+
+.gastos-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.gastos-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--neon-cyan);
+  margin: 0 0 4px;
+  text-shadow: 0 0 12px rgba(0,245,255,0.35);
+}
+
+.gastos-sub { font-size: 14px; color: var(--text-muted); }
+
+.gastos-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.gastos-totales {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.gastos-total-card { border-color: rgba(0,255,157,0.25); box-shadow: 0 0 20px rgba(0,255,157,0.08); }
+.gastos-total-num {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--neon-green);
+  text-shadow: 0 0 14px rgba(0,255,157,0.5);
+}
