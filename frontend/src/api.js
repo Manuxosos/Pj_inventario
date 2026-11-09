@@ -93,6 +93,7 @@ export const setCapacidadMesa  = (capacidad, edificio) => api.put('/edificios/ca
 // Resumen de edificios (pisos y agentes) y traslado/intercambio entre edificios
 export const getAgentesEdificios = ()              => api.get('/agentes/edificios').then(r => r.data);
 export const trasladarAgente   = (datos)           => api.put('/agentes/trasladar', datos).then(r => r.data);
+export const getDestinosTraslado = ()              => api.get('/agentes/destinos-traslado').then(r => r.data);
 // Stock de accesorios (audífonos, monitores, celulares) por edificio
 export const getAccesorios      = (categoria) => api.get('/accesorios', { params: { categoria } }).then(r => r.data);
 export const crearAccesorio     = (data)      => api.post('/accesorios', data).then(r => r.data);
