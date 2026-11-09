@@ -13,6 +13,7 @@ const COLUMNS = [
   { header: 'Monto (USD)',    key: 'monto',            width: 14 },
   { header: 'Periodicidad',   key: 'periodicidad_label', width: 16 },
   { header: 'Estado',         key: 'estado_label',     width: 12 },
+  { header: 'Cargado por',    key: 'usuario_nombre',   width: 18 },
 ];
 
 const CATEGORIA_LABEL    = { internet: 'Internet y telefonía', software: 'Software', hardware: 'Hardware', accesorios: 'Accesorios', mantenimiento: 'Mantenimiento', otro: 'Otro' };
@@ -43,7 +44,7 @@ function construirWorkbookGastos(gastos) {
     edRow.getCell(1).font = { bold: true, size: 12, color: { argb: 'FF1E3A5F' } };
     edRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
     edRow.height = 18;
-    ws.mergeCells(`A${edRow.number}:I${edRow.number}`);
+    ws.mergeCells(`A${edRow.number}:J${edRow.number}`);
 
     let subtotal = 0;
     for (const g of filas) {
@@ -75,7 +76,7 @@ function construirWorkbookGastos(gastos) {
   totalRow.getCell(7).font = { bold: true, size: 12 };
 
   ws.views = [{ state: 'frozen', ySplit: 1 }];
-  ws.autoFilter = { from: 'A1', to: 'I1' };
+  ws.autoFilter = { from: 'A1', to: 'J1' };
   return wb;
 }
 
