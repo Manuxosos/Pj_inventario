@@ -270,6 +270,9 @@ async function initSchema() {
   await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_periodicidad_check CHECK (periodicidad IN ('mensual','anual','unico','segun_necesidad'))`);
   await pool.query(`ALTER TABLE gastos DROP CONSTRAINT IF EXISTS gastos_estado_check`);
   await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_estado_check CHECK (estado IN ('activo','cancelado','pendiente'))`);
+  await pool.query(`ALTER TABLE gastos ADD COLUMN IF NOT EXISTS categoria TEXT NOT NULL DEFAULT 'otro'`);
+  await pool.query(`ALTER TABLE gastos DROP CONSTRAINT IF EXISTS gastos_categoria_check`);
+  await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_categoria_check CHECK (categoria IN ('internet','software','hardware','accesorios','mantenimiento','otro'))`);
 
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');

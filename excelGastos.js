@@ -6,6 +6,7 @@ const ExcelJS = require('exceljs');
 const COLUMNS = [
   { header: 'Edificio',       key: 'edificio_nombre', width: 14 },
   { header: 'Fecha',          key: 'fecha',            width: 12 },
+  { header: 'Categoría',      key: 'categoria_label',  width: 16 },
   { header: 'Concepto',       key: 'concepto',         width: 32 },
   { header: 'Proveedor',      key: 'proveedor',        width: 20 },
   { header: 'Cantidad',       key: 'cantidad',         width: 10 },
@@ -14,6 +15,7 @@ const COLUMNS = [
   { header: 'Estado',         key: 'estado_label',     width: 12 },
 ];
 
+const CATEGORIA_LABEL    = { internet: 'Internet y telefonía', software: 'Software', hardware: 'Hardware', accesorios: 'Accesorios', mantenimiento: 'Mantenimiento', otro: 'Otro' };
 const PERIODICIDAD_LABEL = { mensual: 'Mensual', anual: 'Anual', unico: 'Único', segun_necesidad: 'Según necesidad' };
 const ESTADO_LABEL       = { activo: 'Activo', cancelado: 'Cancelado', pendiente: 'Pendiente' };
 const ESTADO_COLORS      = { activo: 'FFC6EFCE', cancelado: 'FFFFC7CE', pendiente: 'FFFFEB9C' };
@@ -41,38 +43,39 @@ function construirWorkbookGastos(gastos) {
     edRow.getCell(1).font = { bold: true, size: 12, color: { argb: 'FF1E3A5F' } };
     edRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF2F2F2' } };
     edRow.height = 18;
-    ws.mergeCells(`A${edRow.number}:H${edRow.number}`);
+    ws.mergeCells(`A${edRow.number}:I${edRow.number}`);
 
     let subtotal = 0;
     for (const g of filas) {
       subtotal += parseFloat(g.monto);
       const row = ws.addRow(COLUMNS.map(c => {
         if (c.key === 'fecha') return new Date(g.fecha).toLocaleDateString('es-CL');
+        if (c.key === 'categoria_label') return CATEGORIA_LABEL[g.categoria] || g.categoria;
         if (c.key === 'periodicidad_label') return PERIODICIDAD_LABEL[g.periodicidad] || g.periodicidad;
         if (c.key === 'estado_label') return ESTADO_LABEL[g.estado] || g.estado;
         return g[c.key] ?? '';
       }));
       row.eachCell((cell, colNum) => {
         cell.border = { bottom: { style: 'hair', color: { argb: 'FFCCCCCC' } }, right: { style: 'hair', color: { argb: 'FFCCCCCC' } } };
-        if (colNum === 8 && ESTADO_COLORS[g.estado]) {
+        if (colNum === 9 && ESTADO_COLORS[g.estado]) {
           cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ESTADO_COLORS[g.estado] } };
           cell.font = { bold: true };
         }
       });
     }
     totalGeneral += subtotal;
-    const subtotalRow = ws.addRow(['', '', '', '', 'Subtotal', subtotal.toFixed(2)]);
-    subtotalRow.getCell(5).font = { bold: true };
+    const subtotalRow = ws.addRow(['', '', '', '', '', 'Subtotal', subtotal.toFixed(2)]);
     subtotalRow.getCell(6).font = { bold: true };
+    subtotalRow.getCell(7).font = { bold: true };
   }
 
   ws.addRow([]);
-  const totalRow = ws.addRow(['', '', '', '', 'TOTAL', totalGeneral.toFixed(2)]);
-  totalRow.getCell(5).font = { bold: true, size: 12 };
+  const totalRow = ws.addRow(['', '', '', '', '', 'TOTAL', totalGeneral.toFixed(2)]);
   totalRow.getCell(6).font = { bold: true, size: 12 };
+  totalRow.getCell(7).font = { bold: true, size: 12 };
 
   ws.views = [{ state: 'frozen', ySplit: 1 }];
-  ws.autoFilter = { from: 'A1', to: 'H1' };
+  ws.autoFilter = { from: 'A1', to: 'I1' };
   return wb;
 }
 
