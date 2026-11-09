@@ -7,7 +7,7 @@ import {
   PlusCircle, Pencil, Trash2, Copy, Download, Wallet, History, AlertTriangle,
 } from 'lucide-react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts';
 import ConfirmModal from './ConfirmModal';
 import './Gastos.css';
@@ -149,7 +149,13 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
     });
   };
 
-  const chartData = resumenMensual.map(r => ({ mes: fmtMesCorto(r.mes), total: r.total }));
+  const chartData = resumenMensual.map(r => ({ mes: fmtMesCorto(r.mes), mesIso: r.mes, total: r.total }));
+
+  const handleClickMes = data => {
+    if (!data?.mesIso) return;
+    setVerTodos(false);
+    setMes(data.mesIso);
+  };
 
   const total = gastos.reduce((s, g) => s + parseFloat(g.monto), 0);
   const porEdificio = mostrarColEdificio
@@ -233,14 +239,18 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
 
       {chartData.length > 1 && (
         <div className="card gastos-chart-card">
-          <p className="gastos-chart-titulo">Evolución mensual (últimos 12 meses)</p>
+          <p className="gastos-chart-titulo">Evolución mensual (últimos 12 meses) — click en una barra para ver ese mes</p>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={chartData} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
               <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#3a6a88' }} axisLine={{ stroke: 'rgba(0,229,255,0.12)' }} tickLine={false} />
               <YAxis tick={{ fontSize: 12, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
-              <Bar dataKey="total" name="Total" fill="#00e5ff" radius={[4, 4, 0, 0]} maxBarSize={40} />
+              <Bar dataKey="total" name="Total" radius={[4, 4, 0, 0]} maxBarSize={40} cursor="pointer" onClick={handleClickMes}>
+                {chartData.map(d => (
+                  <Cell key={d.mesIso} fill={!verTodos && d.mesIso === mes ? '#00ff9d' : '#00e5ff'} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -267,6 +277,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
                 <th>Monto</th>
                 <th>Periodicidad</th>
                 <th>Estado</th>
+                <th>Cargado por</th>
                 {puedeEditar && <th></th>}
               </tr>
             </thead>
@@ -284,6 +295,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
                     <td className="mono">{fmtMonto(g.monto)}</td>
                     <td className="text-muted small">{PERIODICIDAD_LABEL[g.periodicidad]}</td>
                     <td>{meta && <span className={`badge ${meta.badge}`}>{meta.label}</span>}</td>
+                    <td className="text-muted small">{g.usuario_nombre || '—'}</td>
                     {puedeEditar && (
                       <td className="actions-cell">
                         <button className="btn btn-ghost btn-sm" title="Editar"
