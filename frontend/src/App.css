@@ -544,6 +544,17 @@
   box-shadow: 0 0 0 2px rgba(0,245,255,0.12), 0 0 12px rgba(0,245,255,0.1);
 }
 
+/* El ícono nativo del calendario (input type="date"/"month") es oscuro por
+   defecto en Chrome/Edge y queda casi invisible sobre nuestro fondo oscuro,
+   dando la impresión de que el campo no es clickeable. Se invierte para que
+   se vea claro, y se agranda un poco para que sea más fácil de clickear. */
+.form-input[type="date"]::-webkit-calendar-picker-indicator,
+.form-input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) brightness(1.3);
+  cursor: pointer;
+  padding: 4px;
+}
+
 /* ── Badges ── */
 .badge {
   display: inline-flex; align-items: center;

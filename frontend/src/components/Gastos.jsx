@@ -178,6 +178,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
             className="form-input"
             value={mes}
             onChange={e => setMes(e.target.value)}
+            onClick={e => { try { e.target.showPicker?.(); } catch { /* no soportado en este navegador */ } }}
             disabled={verTodos}
           />
           <button
@@ -391,7 +392,13 @@ function GastoModal({ mode, data, esGlobal, edificios, onClose, onSaved }) {
 
               <div className="form-group">
                 <label className="form-label">Fecha</label>
-                <input type="date" className="form-input" value={form.fecha} onChange={e => set('fecha', e.target.value)} />
+                <input
+                  type="date"
+                  className="form-input"
+                  value={form.fecha}
+                  onChange={e => set('fecha', e.target.value)}
+                  onClick={e => { try { e.target.showPicker?.(); } catch { /* no soportado en este navegador */ } }}
+                />
               </div>
 
               <div className="form-group">
