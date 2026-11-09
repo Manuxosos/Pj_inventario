@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGastos, createGasto, updateGasto, deleteGasto, exportarGastos } from '../api';
-import { PlusCircle, Pencil, Trash2, Download, Wallet } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2, Download, Wallet, History } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import './Gastos.css';
 
@@ -42,6 +42,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
   const [gastos, setGastos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [mes, setMes] = useState(mesActual());
+  const [verTodos, setVerTodos] = useState(false);
   const [modal, setModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [exportando, setExportando] = useState(false);
@@ -52,10 +53,10 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
 
   const cargar = () => {
     setLoading(true);
-    getGastos({ mes }).then(g => { setGastos(g); setLoading(false); });
+    getGastos(verTodos ? {} : { mes }).then(g => { setGastos(g); setLoading(false); });
   };
 
-  useEffect(() => { cargar(); }, [refresh, mes]);
+  useEffect(() => { cargar(); }, [refresh, mes, verTodos]);
 
   const handleDelete = async () => {
     await deleteGasto(confirmDelete.id);
@@ -66,11 +67,11 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
   const handleExportar = async () => {
     setExportando(true);
     try {
-      const blob = await exportarGastos({ mes });
+      const blob = await exportarGastos(verTodos ? {} : { mes });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `gastos_${mes}.xlsx`;
+      a.download = verTodos ? 'gastos_historial.xlsx' : `gastos_${mes}.xlsx`;
       a.click();
       URL.revokeObjectURL(url);
       showToast?.('Excel exportado correctamente');
@@ -97,7 +98,21 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
           <p className="gastos-sub">Compras y suscripciones mensuales de IT</p>
         </div>
         <div className="gastos-header-acciones">
-          <input type="month" className="form-input" value={mes} onChange={e => setMes(e.target.value)} />
+          <input
+            type="month"
+            className="form-input"
+            value={mes}
+            onChange={e => setMes(e.target.value)}
+            disabled={verTodos}
+          />
+          <button
+            type="button"
+            className={`btn btn-secondary gastos-historial-btn${verTodos ? ' active' : ''}`}
+            onClick={() => setVerTodos(v => !v)}
+            title="Ver gastos de todos los meses"
+          >
+            <History size={14} /> {verTodos ? 'Viendo todo el historial' : 'Ver todo el historial'}
+          </button>
           {puedeExportar && (
             <button className="btn btn-secondary" onClick={handleExportar} disabled={exportando}>
               <Download size={14} /> {exportando ? 'Exportando...' : 'Exportar Excel'}
@@ -114,7 +129,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
       <div className="gastos-totales">
         <div className="stat-card card gastos-total-card">
           <span className="stat-num gastos-total-num"><Wallet size={20} /> {fmtMonto(total)}</span>
-          <span className="stat-label">Total del mes</span>
+          <span className="stat-label">{verTodos ? 'Total general' : 'Total del mes'}</span>
         </div>
         {porEdificio.map(([nombre, monto]) => (
           <div key={nombre} className="stat-card card">
@@ -129,7 +144,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
       ) : gastos.length === 0 ? (
         <div className="table-empty">
           <Wallet size={28} />
-          <p>No hay gastos registrados para este mes.</p>
+          <p>{verTodos ? 'No hay gastos registrados.' : 'No hay gastos registrados para este mes.'}</p>
         </div>
       ) : (
         <div className="table-wrapper">
