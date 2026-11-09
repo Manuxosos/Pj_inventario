@@ -680,7 +680,14 @@ app.get('/api/usuarios/asignables', async (req, res) => {
 // un edificio específico — no tiene sentido agregar asientos entre edificios.
 app.get('/api/agentes/tablero', async (req, res) => {
   try {
-    const scope = scopeEdificio(req);
+    let scope = scopeEdificio(req);
+    // IT puede pedir el tablero de OTRO edificio (vía ?edificio=) para elegir
+    // el piso de destino al trasladar un agente ahí; scopeEdificio() por
+    // diseño ignora ese parámetro para IT en el resto de la app.
+    if (req.user.rol === 'it' && req.user.edificio_id != null) {
+      const q = parseInt(req.query.edificio);
+      if (Number.isInteger(q)) scope = q;
+    }
     if (scope == null) return res.json({ pisos: [], tablero: {} });
 
     const { rows: equipos } = await pool.query(
@@ -853,17 +860,23 @@ app.get('/api/agentes/edificios', async (req, res) => {
 });
 
 // PUT /api/agentes/trasladar — mueve un agente (y sus equipos) a otro edificio,
-// o lo intercambia con un agente de ese edificio. Solo admin con alcance
-// global, porque toca dos edificios. Cada equipo que cambia de edificio o de
-// piso queda en el historial. Body: { agente, origen, destino, piso,
-// intercambiarCon? } — piso es el piso de destino del agente que se traslada;
-// en un intercambio, el otro agente toma el piso y la mesa que deja el primero.
-app.put('/api/agentes/trasladar', requireRol('admin'), async (req, res) => {
-  if (req.user.edificio_id != null) return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+// o lo intercambia con un agente de ese edificio. Admin con alcance global, o
+// IT, porque toca dos edificios. Un IT solo puede trasladar DESDE su propio
+// edificio (no puede orquestar un traslado entre dos edificios ajenos). Cada
+// equipo que cambia de edificio o de piso queda en el historial. Body:
+// { agente, origen, destino, piso, intercambiarCon? } — piso es el piso de
+// destino del agente que se traslada; en un intercambio, el otro agente toma
+// el piso y la mesa que deja el primero.
+app.put('/api/agentes/trasladar', requireRol('admin', 'it'), async (req, res) => {
+  const fijo = req.user.edificio_id;
   const { agente, piso, intercambiarCon } = req.body;
   const origen = parseInt(req.body.origen), destino = parseInt(req.body.destino);
   if (!agente?.trim() || !piso?.trim() || !Number.isInteger(origen) || !Number.isInteger(destino)) {
     return res.status(400).json({ error: 'Faltan datos (agente, origen, destino, piso)' });
+  }
+  if (fijo != null && req.user.rol !== 'it') return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+  if (fijo != null && origen !== fijo) {
+    return res.status(403).json({ error: 'Solo puedes trasladar agentes desde tu propio edificio' });
   }
   if (origen === destino) return res.status(400).json({ error: 'El edificio de destino debe ser distinto al de origen' });
 
@@ -928,6 +941,20 @@ app.put('/api/agentes/trasladar', requireRol('admin'), async (req, res) => {
     error500(res, err);
   } finally {
     client.release();
+  }
+});
+
+// GET /api/agentes/destinos-traslado — lista liviana (id, nombre) de todos
+// los edificios, para elegir el destino al trasladar un agente. A diferencia
+// de /api/edificios (abajo), un IT con edificio fijo también la puede pedir:
+// el traslado siempre parte de su propio edificio hacia otro, así que
+// necesita saber qué otros edificios existen.
+app.get('/api/agentes/destinos-traslado', requireRol('admin', 'it'), async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, nombre FROM edificios ORDER BY nombre');
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
   }
 });
 

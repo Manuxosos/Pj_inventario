@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X, ChevronDown, ArrowRightLeft, Users } from 'lucide-react';
-import { getAgentesTablero, moverAgente, setCapacidadMesa, trasladarAgente } from '../api';
+import { getAgentesTablero, moverAgente, setCapacidadMesa, trasladarAgente, getDestinosTraslado } from '../api';
 import AgenteInfoModal from './AgenteInfoModal';
 import EdificioIso from './EdificioIso';
 import { metaEstado, ESTADOS_EQUIPO } from '../semantica';
@@ -50,7 +50,17 @@ function Asiento({ nombre, estado, draggable, dragging, onDragStart, onDragEnd, 
 // sobre otro edificio de la barra superior abre el traslado / intercambio.
 export default function EdificioPopup({ edificio, origen, edificios, rol, esGlobal, onClose, onCambio, onOpenEquipo, onEditEquipo, showToast }) {
   const puedeMover = rol === 'admin' || rol === 'it';
-  const puedeTrasladar = rol === 'admin' && esGlobal;
+  // Admin solo puede trasladar con alcance global (viendo "Todos los
+  // edificios"); IT siempre puede, porque el traslado parte de su propio
+  // edificio (el backend valida que el origen sea el suyo).
+  const puedeTrasladar = (rol === 'admin' && esGlobal) || rol === 'it';
+  // IT tiene edificio fijo, así que la lista "edificios" que llega por props
+  // (la del grid de Agentes) solo trae el suyo. Para poder elegir un destino
+  // de traslado, pide la lista completa por separado.
+  const [edificiosParaTraslado, setEdificiosParaTraslado] = useState(null);
+  useEffect(() => {
+    if (rol === 'it' && puedeTrasladar) getDestinosTraslado().then(setEdificiosParaTraslado);
+  }, [rol, puedeTrasladar]);
   const [tablero, setTablero] = useState({});
   const [pisos, setPisos] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -139,7 +149,8 @@ export default function EdificioPopup({ edificio, origen, edificios, rol, esGlob
     cargar();
   };
 
-  const otros = edificios.filter(ed => ed.id !== edificio.id);
+  const listaEdificios = rol === 'it' ? (edificiosParaTraslado || []) : edificios;
+  const otros = listaEdificios.filter(ed => ed.id !== edificio.id);
   const totalAgentes = pisos.reduce((s, p) => s + Object.values(tablero[p] || {}).reduce((t, m) => t + m.length, 0), 0);
 
   // Portal al body: la sección vive dentro de un contenedor animado que crea
