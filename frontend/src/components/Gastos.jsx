@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
-import { getGastos, createGasto, updateGasto, deleteGasto, exportarGastos } from '../api';
-import { PlusCircle, Pencil, Trash2, Download, Wallet, History } from 'lucide-react';
+import {
+  getGastos, createGasto, updateGasto, deleteGasto, exportarGastos,
+  getGastosResumenMensual, getGastosPendientes,
+} from '../api';
+import {
+  PlusCircle, Pencil, Trash2, Copy, Download, Wallet, History, AlertTriangle,
+} from 'lucide-react';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
 import ConfirmModal from './ConfirmModal';
 import './Gastos.css';
 
@@ -19,6 +27,32 @@ const ESTADOS = [
 ];
 const ESTADO_META = Object.fromEntries(ESTADOS.map(e => [e.value, e]));
 
+const CATEGORIAS = [
+  { value: 'internet',      label: 'Internet y telefonía' },
+  { value: 'software',      label: 'Software' },
+  { value: 'hardware',      label: 'Hardware' },
+  { value: 'accesorios',    label: 'Accesorios' },
+  { value: 'mantenimiento', label: 'Mantenimiento' },
+  { value: 'otro',          label: 'Otro' },
+];
+const CATEGORIA_LABEL = Object.fromEntries(CATEGORIAS.map(c => [c.value, c.label]));
+
+const MES_CORTO = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function fmtMesCorto(mesIso) {
+  const [, m] = mesIso.split('-');
+  return MES_CORTO[parseInt(m, 10) - 1] || mesIso;
+}
+
+const ChartTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="tooltip-label">{label}</p>
+      <p><strong>{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(payload[0].value)}</strong></p>
+    </div>
+  );
+};
+
 function mesActual() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -35,7 +69,7 @@ function fmtFecha(iso) {
 const FORM_VACIO = {
   fecha: new Date().toISOString().slice(0, 10),
   concepto: '', proveedor: '', cantidad: '', monto: '',
-  periodicidad: 'unico', estado: 'activo', edificio_id: '',
+  periodicidad: 'unico', estado: 'activo', categoria: 'otro', edificio_id: '',
 };
 
 export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh, showToast }) {
@@ -46,6 +80,8 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
   const [modal, setModal] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [exportando, setExportando] = useState(false);
+  const [resumenMensual, setResumenMensual] = useState([]);
+  const [pendientes, setPendientes] = useState([]);
 
   const puedeEditar = rol === 'admin' || rol === 'it';
   const puedeExportar = rol === 'admin' || rol === 'observador';
@@ -56,12 +92,19 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
     getGastos(verTodos ? {} : { mes }).then(g => { setGastos(g); setLoading(false); });
   };
 
+  const cargarExtras = () => {
+    getGastosResumenMensual().then(setResumenMensual);
+    if (puedeEditar) getGastosPendientes().then(setPendientes);
+  };
+
   useEffect(() => { cargar(); }, [refresh, mes, verTodos]);
+  useEffect(() => { cargarExtras(); }, [refresh, edificioSel]);
 
   const handleDelete = async () => {
     await deleteGasto(confirmDelete.id);
     setGastos(prev => prev.filter(g => g.id !== confirmDelete.id));
     setConfirmDelete(null);
+    cargarExtras();
   };
 
   const handleExportar = async () => {
@@ -81,6 +124,32 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
       setExportando(false);
     }
   };
+
+  const handleDuplicar = g => {
+    setModal({
+      mode: 'create',
+      data: {
+        ...FORM_VACIO,
+        concepto: g.concepto, proveedor: g.proveedor || '', cantidad: g.cantidad ?? '',
+        monto: g.monto, periodicidad: g.periodicidad, estado: g.estado, categoria: g.categoria || 'otro',
+        edificio_id: g.edificio_id ?? edificioSel ?? '',
+      },
+    });
+  };
+
+  const handleCargarPendiente = p => {
+    setModal({
+      mode: 'create',
+      data: {
+        ...FORM_VACIO,
+        concepto: p.concepto, proveedor: p.proveedor || '', monto: p.monto,
+        periodicidad: 'mensual', categoria: p.categoria || 'otro',
+        edificio_id: p.edificio_id ?? edificioSel ?? '',
+      },
+    });
+  };
+
+  const chartData = resumenMensual.map(r => ({ mes: fmtMesCorto(r.mes), total: r.total }));
 
   const total = gastos.reduce((s, g) => s + parseFloat(g.monto), 0);
   const porEdificio = mostrarColEdificio
@@ -126,6 +195,29 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
         </div>
       </div>
 
+      {pendientes.length > 0 && (
+        <div className="gastos-pendientes-banner">
+          <div className="gastos-pendientes-titulo">
+            <AlertTriangle size={16} />
+            Gastos recurrentes sin cargar este mes ({pendientes.length})
+          </div>
+          <ul className="gastos-pendientes-lista">
+            {pendientes.map(p => (
+              <li key={`${p.edificio_id}-${p.concepto}`}>
+                <span>
+                  {mostrarColEdificio && <strong>{p.edificio_nombre}: </strong>}
+                  {p.concepto}
+                  {p.proveedor && <span className="text-muted"> · {p.proveedor}</span>}
+                </span>
+                <button className="btn btn-ghost btn-sm" onClick={() => handleCargarPendiente(p)}>
+                  Cargar ahora
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="gastos-totales">
         <div className="stat-card card gastos-total-card">
           <span className="stat-num gastos-total-num"><Wallet size={20} /> {fmtMonto(total)}</span>
@@ -138,6 +230,21 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
           </div>
         ))}
       </div>
+
+      {chartData.length > 1 && (
+        <div className="card gastos-chart-card">
+          <p className="gastos-chart-titulo">Evolución mensual (últimos 12 meses)</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={chartData} margin={{ top: 4, right: 10, left: -20, bottom: 4 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,229,255,0.06)" vertical={false} />
+              <XAxis dataKey="mes" tick={{ fontSize: 12, fill: '#3a6a88' }} axisLine={{ stroke: 'rgba(0,229,255,0.12)' }} tickLine={false} />
+              <YAxis tick={{ fontSize: 12, fill: '#3a6a88' }} axisLine={false} tickLine={false} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(0,229,255,0.08)' }} />
+              <Bar dataKey="total" name="Total" fill="#00e5ff" radius={[4, 4, 0, 0]} maxBarSize={40} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {loading ? (
         <div className="skeleton-bar" style={{ height: 200, borderRadius: 12 }} />
@@ -153,6 +260,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
               <tr>
                 {mostrarColEdificio && <th>Edificio</th>}
                 <th>Fecha</th>
+                <th>Categoría</th>
                 <th>Concepto</th>
                 <th>Proveedor</th>
                 <th>Cant.</th>
@@ -169,6 +277,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
                   <tr key={g.id} className="equip-row">
                     {mostrarColEdificio && <td>{g.edificio_nombre}</td>}
                     <td>{fmtFecha(g.fecha)}</td>
+                    <td className="text-muted small">{CATEGORIA_LABEL[g.categoria] || '—'}</td>
                     <td className="model-cell">{g.concepto}</td>
                     <td className="text-muted">{g.proveedor || '—'}</td>
                     <td>{g.cantidad ?? '—'}</td>
@@ -180,6 +289,9 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
                         <button className="btn btn-ghost btn-sm" title="Editar"
                           onClick={() => setModal({ mode: 'edit', data: { ...g, fecha: String(g.fecha).slice(0, 10), cantidad: g.cantidad ?? '' } })}>
                           <Pencil size={13} />
+                        </button>
+                        <button className="btn btn-ghost btn-sm" title="Duplicar" onClick={() => handleDuplicar(g)}>
+                          <Copy size={13} />
                         </button>
                         {rol === 'admin' && (
                           <button className="btn btn-ghost btn-sm danger-btn" title="Eliminar" onClick={() => setConfirmDelete(g)}>
@@ -203,7 +315,7 @@ export default function Gastos({ rol, esGlobal, edificioSel, edificios, refresh,
           esGlobal={esGlobal}
           edificios={edificios}
           onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); cargar(); }}
+          onSaved={() => { setModal(null); cargar(); cargarExtras(); }}
         />
       )}
 
@@ -278,6 +390,13 @@ function GastoModal({ mode, data, esGlobal, edificios, onClose, onSaved }) {
               <div className="form-group full-width">
                 <label className="form-label">Concepto</label>
                 <input className="form-input" value={form.concepto} onChange={e => set('concepto', e.target.value)} placeholder="Ej: Recarga OnlineSIM.io" />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Categoría</label>
+                <select className="form-input" value={form.categoria} onChange={e => set('categoria', e.target.value)}>
+                  {CATEGORIAS.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
               </div>
 
               <div className="form-group">

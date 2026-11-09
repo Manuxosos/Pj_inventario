@@ -140,44 +140,9 @@
   text-shadow: 0 0 10px rgba(0,245,255,0.4);
 }
 
-/* Tooltip */
-.chart-tooltip {
-  background: var(--surface2);
-  border: 1px solid rgba(0,245,255,0.2);
-  border-radius: 6px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: var(--text);
-  box-shadow: 0 0 20px rgba(0,245,255,0.1);
-}
-.tooltip-label { font-weight: 600; margin-bottom: 4px; color: var(--neon-cyan); }
-.chart-tooltip p { display: flex; align-items: center; gap: 6px; margin: 0; }
-.chart-tooltip .legend-dot { flex-shrink: 0; }
-
-/* Legend custom */
-.custom-legend {
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 16px;
-  padding: 6px 0 0;
-}
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-.legend-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.legend-text {
-  font-size: 12px;
-  color: #94a3b8;
-}
+/* El tooltip/leyenda de gráficos (.chart-tooltip, .custom-legend, etc.) vive
+   en App.css, no acá: Gastos.jsx también los usa y por el code splitting
+   por pestaña no hay garantía de qué CSS ya cargó. */
 
 .dash-card-hint {
   font-size: 11px;

@@ -81,6 +81,8 @@ export const createGasto    = (data)       => api.post('/gastos', { ...data, edi
 export const updateGasto    = (id, data)   => api.put(`/gastos/${id}`, data).then(r => r.data);
 export const deleteGasto    = (id)         => api.delete(`/gastos/${id}`).then(r => r.data);
 export const exportarGastos = (params)     => api.get('/gastos/exportar', { params, responseType: 'blob' }).then(r => r.data);
+export const getGastosResumenMensual = ()  => api.get('/gastos/resumen-mensual').then(r => r.data);
+export const getGastosPendientes     = ()  => api.get('/gastos/pendientes').then(r => r.data);
 
 // Tablero de agentes por piso/mesa
 // `edificio` (opcional) fija el edificio de la consulta; sin él se usa el activo.

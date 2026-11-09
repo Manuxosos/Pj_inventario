@@ -501,6 +501,7 @@ app.delete('/api/tickets/:id', requireRol('admin'), async (req, res) => {
 // ── Gastos mensuales de IT (compras, suscripciones) ─────────────────────────
 const GASTO_PERIODICIDADES = ['mensual', 'anual', 'unico', 'segun_necesidad'];
 const GASTO_ESTADOS = ['activo', 'cancelado', 'pendiente'];
+const GASTO_CATEGORIAS = ['internet', 'software', 'hardware', 'accesorios', 'mantenimiento', 'otro'];
 
 function buildGastosQuery(query, edificioId) {
   const { params, add } = mkParams();
@@ -520,6 +521,7 @@ function validarGasto(body) {
   if (!Number.isFinite(monto) || monto < 0) return 'El monto debe ser un número mayor o igual a 0';
   if (!GASTO_PERIODICIDADES.includes(body.periodicidad)) return 'Periodicidad inválida';
   if (!GASTO_ESTADOS.includes(body.estado)) return 'Estado inválido';
+  if (!GASTO_CATEGORIAS.includes(body.categoria)) return 'Categoría inválida';
   if (body.cantidad != null && body.cantidad !== '' && !Number.isInteger(parseInt(body.cantidad))) {
     return 'La cantidad debe ser un número entero';
   }
@@ -544,11 +546,11 @@ app.post('/api/gastos', requireRol('admin', 'it'), async (req, res) => {
     }
     const error = validarGasto(req.body);
     if (error) return res.status(400).json({ error });
-    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, categoria } = req.body;
     const { rows } = await pool.query(
-      `INSERT INTO gastos (edificio_id, fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, usuario_id, usuario_nombre)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
-      [edificioId, fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado,
+      `INSERT INTO gastos (edificio_id, fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, categoria, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+      [edificioId, fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado, categoria,
        req.user.id, req.user.nombre || req.user.usuario]
     );
     res.status(201).json({ id: rows[0].id });
@@ -562,9 +564,9 @@ app.put('/api/gastos/:id', requireRol('admin', 'it'), async (req, res) => {
     const scope = scopeEdificio(req);
     const error = validarGasto(req.body);
     if (error) return res.status(400).json({ error });
-    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado } = req.body;
-    const params = [fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado, req.params.id];
-    let q = `UPDATE gastos SET fecha=$1, concepto=$2, proveedor=$3, cantidad=$4, monto=$5, periodicidad=$6, estado=$7 WHERE id=$8`;
+    const { fecha, concepto, proveedor, cantidad, monto, periodicidad, estado, categoria } = req.body;
+    const params = [fecha, concepto.trim(), (proveedor || '').trim(), cantidad || null, monto, periodicidad, estado, categoria, req.params.id];
+    let q = `UPDATE gastos SET fecha=$1, concepto=$2, proveedor=$3, cantidad=$4, monto=$5, periodicidad=$6, estado=$7, categoria=$8 WHERE id=$9`;
     if (scope != null) { params.push(scope); q += ` AND edificio_id = $${params.length}`; }
     q += ' RETURNING id';
     const { rows } = await pool.query(q, params);
@@ -600,6 +602,57 @@ app.get('/api/gastos/exportar', requireRol('admin', 'observador'), async (req, r
     res.setHeader('Content-Disposition', `attachment; filename="gastos_${new Date().toISOString().slice(0,10)}.xlsx"`);
     await wb.xlsx.write(res);
     res.end();
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// GET /api/gastos/resumen-mensual — total gastado por mes, últimos 12 meses
+// (para el gráfico de evolución; independiente del filtro de mes de la tabla)
+app.get('/api/gastos/resumen-mensual', async (req, res) => {
+  try {
+    const { params, add } = mkParams();
+    let q = `
+      SELECT to_char(fecha, 'YYYY-MM') AS mes, SUM(monto)::float AS total
+      FROM gastos
+      WHERE fecha >= date_trunc('month', CURRENT_DATE) - INTERVAL '11 months'
+    `;
+    const scope = scopeEdificio(req);
+    if (scope != null) q += ` AND edificio_id = ${add(scope)}`;
+    q += ' GROUP BY mes ORDER BY mes ASC';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// GET /api/gastos/pendientes — gastos "mensual" cargados en meses anteriores
+// que todavía no tienen su registro del mes actual (mismo edificio + concepto)
+app.get('/api/gastos/pendientes', async (req, res) => {
+  try {
+    const { params, add } = mkParams();
+    let q = `
+      WITH recurrentes AS (
+        SELECT DISTINCT ON (edificio_id, concepto) edificio_id, concepto, proveedor, monto, categoria
+        FROM gastos
+        WHERE periodicidad = 'mensual' AND to_char(fecha, 'YYYY-MM') < to_char(CURRENT_DATE, 'YYYY-MM')
+        ORDER BY edificio_id, concepto, fecha DESC
+      )
+      SELECT r.*, e.nombre AS edificio_nombre
+      FROM recurrentes r
+      JOIN edificios e ON e.id = r.edificio_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM gastos g2
+        WHERE g2.edificio_id = r.edificio_id AND g2.concepto = r.concepto
+          AND to_char(g2.fecha, 'YYYY-MM') = to_char(CURRENT_DATE, 'YYYY-MM')
+      )
+    `;
+    const scope = scopeEdificio(req);
+    if (scope != null) q += ` AND r.edificio_id = ${add(scope)}`;
+    q += ' ORDER BY e.nombre, r.concepto';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
   } catch (err) {
     error500(res, err);
   }
