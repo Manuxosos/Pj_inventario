@@ -84,6 +84,13 @@ export const exportarGastos = (params)     => api.get('/gastos/exportar', { para
 export const getGastosResumenMensual = ()  => api.get('/gastos/resumen-mensual').then(r => r.data);
 export const getGastosPendientes     = ()  => api.get('/gastos/pendientes').then(r => r.data);
 
+// Bajas: equipos/accesorios dañados sin opción de reparación
+export const getBajas      = (params)     => api.get('/bajas', { params }).then(r => r.data);
+export const createBaja    = (data)       => api.post('/bajas', { ...data, edificio_id: data.edificio_id ?? edificioActivo }).then(r => r.data);
+export const deleteBaja    = (id)         => api.delete(`/bajas/${id}`).then(r => r.data);
+export const exportarBajas = (params)     => api.get('/bajas/exportar', { params, responseType: 'blob' }).then(r => r.data);
+export const getBajasResumenMensual = ()  => api.get('/bajas/resumen-mensual').then(r => r.data);
+
 // Tablero de agentes por piso/mesa
 // `edificio` (opcional) fija el edificio de la consulta; sin él se usa el activo.
 const conEdificio = (edificio) => (edificio != null ? { params: { edificio } } : undefined);

@@ -6,7 +6,9 @@
    al final de la página en vez de flotando centrado, es señal de que
    esas clases se movieron a un CSS que no carga siempre. */
 
-.form-section {}
+/* .form-section / .form-grid / .full-width / .form-error viven en App.css,
+   no acá, por el mismo motivo de arriba: Gastos.jsx y Bajas.jsx también
+   arman su formulario con estas clases. */
 .section-title {
   font-size: 11px;
   font-weight: 700;
@@ -19,14 +21,6 @@
   text-shadow: 0 0 10px rgba(0,245,255,0.4);
 }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.full-width { grid-column: 1 / -1; }
-
 .view-value {
   padding: 8px 12px;
   background: var(--view-value-bg);
@@ -36,14 +30,6 @@
   min-height: 36px;
   display: flex;
   align-items: center;
-}
-
-.form-error {
-  background: #fee2e2;
-  color: #991b1b;
-  padding: 10px 14px;
-  border-radius: var(--radius);
-  font-size: 14px;
 }
 
 textarea.form-input { resize: vertical; }
