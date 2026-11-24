@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEquipos, getOpciones, deleteEquipo, updateEquipo, exportarExcel } from '../api';
-import { Eye, Pencil, Trash2, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4, Headphones, Monitor, Smartphone, Laptop } from 'lucide-react';
+import { Eye, Pencil, Trash2, Ban, ChevronUp, ChevronDown, ChevronsUpDown, X, Download, Trash, PlusCircle, Rows3, Rows4, Headphones, Monitor, Smartphone, Laptop } from 'lucide-react';
 import { metaEstado } from '../semantica';
 import { EstadoBadge, GrupoChip } from './Etiquetas';
 import ConfirmModal from './ConfirmModal';
 import PapeleraModal from './PapeleraModal';
+import BajaModal from './BajaModal';
 import AccesorioCard from './AccesorioCard';
 import { AUDIFONO_TIPOS } from '../accesorioConfig';
 import './EquiposList.css';
@@ -27,7 +28,7 @@ const COLUMNAS = [
   { key: 'responsable',  label: 'Agente' },
 ];
 
-const ESTADOS = ['En uso', 'Disponible', 'En revisión', 'De baja'];
+const ESTADOS = ['En uso', 'Disponible', 'En revisión'];
 
 
 const ACCESORIO_LABEL = {
@@ -62,6 +63,7 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // { id, label } | { ids: [] }
+  const [bajaEquipo, setBajaEquipo] = useState(null); // equipo a dar de baja, o null
   const [sortConfig, setSortConfig] = useState(() => leerGuardado(SORT_KEY) || { key: null, direction: 'asc' });
   const [densidad, setDensidad] = useState(() => leerGuardado(DENSIDAD_KEY) || 'comoda'); // 'comoda' | 'compacta'
   const [seleccion, setSeleccion] = useState(new Set());
@@ -230,7 +232,6 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
   const enUso      = todos.filter(e => e.estado === 'En uso').length;
   const disponibles = todos.filter(e => e.estado === 'Disponible').length;
   const enRevision = todos.filter(e => e.estado === 'En revisión').length;
-  const deBaja     = todos.filter(e => e.estado === 'De baja').length;
   // Edificios de un solo piso (más bodega) no necesitan el filtro — se detecta
   // solo según los pisos que realmente existan en los datos de ese edificio.
   const mostrarFiltroPiso = opciones.pisos.length > 1;
@@ -277,7 +278,6 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
           { estado: 'En uso',      num: enUso,        label: 'En Uso' },
           { estado: 'Disponible',  num: disponibles,  label: 'Disponibles' },
           { estado: 'En revisión', num: enRevision,   label: 'En Revisión' },
-          { estado: 'De baja',     num: deBaja,       label: 'De Baja' },
         ].map(({ estado, num, label }) => {
           // El total usa el cian de la marca; cada estado, su color e icono reservados.
           const meta = estado ? metaEstado(estado) : { color: 'var(--neon-cyan)', Icon: Laptop, desc: 'Todos los equipos' };
@@ -442,6 +442,11 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
                       <button className="btn btn-ghost btn-sm" onClick={() => onEdit(eq)} title="Editar" aria-label="Editar"><Pencil size={14}/></button>
                     )}
                     {puedeEditar && (
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => setBajaEquipo(eq)}
+                        title="Dar de baja (dañado, sin reparación)" aria-label="Dar de baja"><Ban size={14}/></button>
+                    )}
+                    {puedeEditar && (
                       <button className="btn btn-ghost btn-sm danger-btn"
                         onClick={() => setConfirmDelete({ id: eq.id, label: eq.id_activo || eq.marca_modelo || `Equipo #${eq.id}` })}
                         disabled={deleting === eq.id} title="Eliminar" aria-label="Eliminar"><Trash2 size={14}/></button>
@@ -463,6 +468,20 @@ export default function EquiposList({ refresh, externalFilters, rol, esGlobal, e
           confirmLabel="Mover a la papelera"
           onConfirm={handleDelete}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
+      {bajaEquipo && (
+        <BajaModal
+          equipo={bajaEquipo}
+          esGlobal={esGlobal}
+          onClose={() => setBajaEquipo(null)}
+          onSaved={() => {
+            setBajaEquipo(null);
+            setEquipos(prev => prev.filter(e => e.id !== bajaEquipo.id));
+            cargarTodos();
+            showToast?.(`${bajaEquipo.marca_modelo || bajaEquipo.id_activo} dado de baja correctamente`);
+          }}
         />
       )}
 

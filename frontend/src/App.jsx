@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Home, LayoutDashboard, ClipboardList, Users, CheckSquare, Ticket, Wallet, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
+import { Home, LayoutDashboard, ClipboardList, Users, CheckSquare, Ticket, Wallet, Ban, PlusCircle, Monitor, LogOut, Armchair, Search, Building2, Menu, X } from 'lucide-react';
 import Login from './components/Login';
 import { getEquipo, getEdificios, setEdificioActivo } from './api';
 import Toast from './components/Toast';
@@ -18,6 +18,7 @@ const Usuarios     = lazy(() => import('./components/Usuarios'));
 const Tareas       = lazy(() => import('./components/Tareas'));
 const Tickets      = lazy(() => import('./components/Tickets'));
 const Gastos       = lazy(() => import('./components/Gastos'));
+const Bajas        = lazy(() => import('./components/Bajas'));
 const Agentes      = lazy(() => import('./components/Agentes'));
 const GlobalSearch = lazy(() => import('./components/GlobalSearch'));
 
@@ -223,6 +224,9 @@ export default function App() {
             <NavLink to="/inventario" state={{ filtros: null }} className={navClass} onClick={cerrarMenu}>
               <ClipboardList size={16} /> Inventario
             </NavLink>
+            <NavLink to="/bajas" className={navClass} onClick={cerrarMenu}>
+              <Ban size={16} /> Bajas
+            </NavLink>
             <NavLink to="/agentes" className={navClass} onClick={cerrarMenu}>
               <Armchair size={16} /> Agentes
             </NavLink>
@@ -335,6 +339,9 @@ export default function App() {
         <Route path="/tickets" element={seccion(<Tickets rol={rol} refresh={refresh} />)} />
         <Route path="/gastos" element={seccion(
           <Gastos rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} edificios={edificios} refresh={refresh} showToast={showToast} />
+        )} />
+        <Route path="/bajas" element={seccion(
+          <Bajas rol={rol} esGlobal={esGlobal} edificioSel={edificioSel} edificios={edificios} refresh={refresh} showToast={showToast} />
         )} />
         <Route path="/agentes" element={seccion(
           <Agentes

@@ -555,6 +555,38 @@
   padding: 4px;
 }
 
+/* ── Formularios de modal (.form-section, .form-grid, .full-width, .form-error) ──
+   Vive acá, no en EquipoModal.css, porque Gastos.jsx y Bajas.jsx arman su
+   formulario con estas mismas clases y por el code splitting por pestaña
+   no hay garantía de qué CSS ya cargó. */
+.form-section {}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.full-width { grid-column: 1 / -1; }
+
+.form-error {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 14px;
+}
+
+.form-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
 /* ── Badges ── */
 .badge {
   display: inline-flex; align-items: center;

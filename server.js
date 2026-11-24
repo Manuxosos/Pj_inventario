@@ -11,6 +11,7 @@ const { pool, initPromise } = require('./database');
 const { login, verificarToken } = require('./auth');
 const { construirWorkbookInventario } = require('./excelInventario');
 const { construirWorkbookGastos } = require('./excelGastos');
+const { construirWorkbookBajas } = require('./excelBajas');
 
 const app = express();
 
@@ -146,7 +147,11 @@ app.get('/api/equipos/papelera', requireRol('admin'), async (req, res) => {
   try {
     const scope = scopeEdificio(req);
     const { params, add } = mkParams();
-    let q = 'SELECT * FROM equipos WHERE eliminado_en IS NOT NULL';
+    // Un equipo dado de baja (ver tabla "bajas") también queda con
+    // eliminado_en, pero no pertenece a la Papelera — es definitivo, no un
+    // borrado por error que tenga sentido poder restaurar desde acá.
+    let q = `SELECT * FROM equipos WHERE eliminado_en IS NOT NULL
+             AND NOT EXISTS (SELECT 1 FROM bajas WHERE bajas.equipo_id = equipos.id)`;
     if (scope != null) q += ` AND edificio_id = ${add(scope)}`;
     q += ' ORDER BY eliminado_en DESC';
     const { rows } = await pool.query(q, params);
@@ -658,6 +663,145 @@ app.get('/api/gastos/pendientes', async (req, res) => {
   }
 });
 
+// ── Bajas: equipos/accesorios dañados sin opción de reparación ────────────────
+const BAJA_CATEGORIAS = ['laptop', 'audifonos', 'monitores', 'celulares', 'otro'];
+
+function buildBajasQuery(query, edificioId) {
+  const { params, add } = mkParams();
+  let q = `SELECT b.*, e.nombre AS edificio_nombre FROM bajas b JOIN edificios e ON e.id = b.edificio_id WHERE 1=1`;
+  if (edificioId != null) q += ` AND b.edificio_id = ${add(edificioId)}`;
+  if (query.mes && /^\d{4}-\d{2}$/.test(query.mes)) {
+    q += ` AND to_char(b.fecha, 'YYYY-MM') = ${add(query.mes)}`;
+  }
+  q += ' ORDER BY b.fecha DESC, b.id DESC';
+  return { q, params };
+}
+
+function validarBaja(body) {
+  if (!body.fecha) return 'La fecha es obligatoria';
+  if (!body.descripcion?.trim()) return 'La descripción es obligatoria';
+  if (!BAJA_CATEGORIAS.includes(body.categoria)) return 'Categoría inválida';
+  const cantidad = parseInt(body.cantidad);
+  if (!Number.isInteger(cantidad) || cantidad < 1) return 'La cantidad debe ser un número entero mayor a 0';
+  return null;
+}
+
+app.get('/api/bajas', async (req, res) => {
+  try {
+    const { q, params } = buildBajasQuery(req.query, scopeEdificio(req));
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// POST /api/bajas — registra una baja. Si viene equipo_id (un equipo ya
+// cargado, con número de serie), además lo retira del inventario activo
+// (igual que un borrado, pero separado de la Papelera). Sin equipo_id, es
+// algo encontrado dañado que nunca estuvo en el sistema (accesorio suelto o
+// un equipo que nadie había cargado).
+app.post('/api/bajas', requireRol('admin', 'it'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    const error = validarBaja(req.body);
+    if (error) { client.release(); return res.status(400).json({ error }); }
+    const { fecha, categoria, descripcion, cantidad, motivo, equipo_id } = req.body;
+    const numero_serie = req.body.numero_serie || '';
+    const scope = req.user.edificio_id;
+
+    let edificioId = scope != null ? scope : parseInt(req.body.edificio_id);
+    let equipo = null;
+    if (equipo_id) {
+      const { rows } = await client.query('SELECT id, edificio_id, numero_serie FROM equipos WHERE id = $1 AND eliminado_en IS NULL', [equipo_id]);
+      equipo = rows[0];
+      if (!equipo) return res.status(404).json({ error: 'El equipo no existe o ya fue dado de baja' });
+      if (scope != null && equipo.edificio_id !== scope) {
+        return res.status(403).json({ error: 'Ese equipo no pertenece a tu edificio' });
+      }
+      edificioId = equipo.edificio_id;
+    }
+    if (!Number.isInteger(edificioId)) {
+      return res.status(400).json({ error: 'Debe especificar el edificio' });
+    }
+
+    await client.query('BEGIN');
+    const { rows: [nueva] } = await client.query(
+      `INSERT INTO bajas (edificio_id, fecha, categoria, descripcion, numero_serie, cantidad, motivo, equipo_id, usuario_id, usuario_nombre)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+      [edificioId, fecha, categoria, descripcion.trim(), equipo?.numero_serie || numero_serie, cantidad, (motivo || '').trim(),
+       equipo_id || null, req.user.id, req.user.nombre || req.user.usuario]
+    );
+    if (equipo) {
+      await client.query('UPDATE equipos SET eliminado_en = NOW() WHERE id = $1', [equipo.id]);
+    }
+    await client.query('COMMIT');
+    res.status(201).json({ id: nueva.id });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    error500(res, err);
+  } finally {
+    client.release();
+  }
+});
+
+// DELETE /api/bajas/:id — solo admin, para deshacer un registro cargado por
+// error. Si estaba vinculado a un equipo, lo restaura al inventario activo.
+app.delete('/api/bajas/:id', requireRol('admin'), async (req, res) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows: [baja] } = await client.query('SELECT * FROM bajas WHERE id = $1', [req.params.id]);
+    if (!baja) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'No encontrado' }); }
+    await client.query('DELETE FROM bajas WHERE id = $1', [req.params.id]);
+    if (baja.equipo_id) {
+      await client.query('UPDATE equipos SET eliminado_en = NULL WHERE id = $1', [baja.equipo_id]);
+    }
+    await client.query('COMMIT');
+    res.json({ ok: true, equipoRestaurado: !!baja.equipo_id });
+  } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
+    error500(res, err);
+  } finally {
+    client.release();
+  }
+});
+
+// GET /api/bajas/resumen-mensual — total de unidades dadas de baja por mes,
+// últimos 12 meses (mismo patrón que /api/gastos/resumen-mensual)
+app.get('/api/bajas/resumen-mensual', async (req, res) => {
+  try {
+    const { params, add } = mkParams();
+    let q = `
+      SELECT to_char(fecha, 'YYYY-MM') AS mes, SUM(cantidad)::int AS total
+      FROM bajas
+      WHERE fecha >= date_trunc('month', CURRENT_DATE) - INTERVAL '11 months'
+    `;
+    const scope = scopeEdificio(req);
+    if (scope != null) q += ` AND edificio_id = ${add(scope)}`;
+    q += ' GROUP BY mes ORDER BY mes ASC';
+    const { rows } = await pool.query(q, params);
+    res.json(rows);
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
+// GET /api/bajas/exportar — admin y observador, mismos filtros que la lista
+app.get('/api/bajas/exportar', requireRol('admin', 'observador'), async (req, res) => {
+  try {
+    const { q, params } = buildBajasQuery(req.query, scopeEdificio(req));
+    const { rows: bajas } = await pool.query(q, params);
+    const wb = construirWorkbookBajas(bajas);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="bajas_${new Date().toISOString().slice(0,10)}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    error500(res, err);
+  }
+});
+
 // ── Usuarios asignables (para dropdown de tareas) ─────────────────────────────
 app.get('/api/usuarios/asignables', async (req, res) => {
   try {
@@ -708,7 +852,7 @@ app.get('/api/agentes/tablero', async (req, res) => {
 
     // estado a mostrar en el anillo del avatar: prioriza lo mas urgente/notable
     // entre todos los equipos de ese agente
-    const PRIORIDAD_ESTADO = ['En revisión', 'De baja', 'En uso', 'Disponible'];
+    const PRIORIDAD_ESTADO = ['En revisión', 'En uso', 'Disponible'];
     function estadoPrincipal(estados) {
       for (const e of PRIORIDAD_ESTADO) if (estados.has(e)) return e;
       return null;

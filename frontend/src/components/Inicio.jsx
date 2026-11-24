@@ -1,4 +1,4 @@
-import { LogOut, CheckSquare, Ticket, LayoutDashboard, Wallet, ClipboardList, Armchair, Mail, Monitor } from 'lucide-react';
+import { LogOut, CheckSquare, Ticket, LayoutDashboard, Wallet, ClipboardList, Ban, Armchair, Mail, Monitor } from 'lucide-react';
 import './Inicio.css';
 
 // Menú principal: separa los módulos en IT ZONE (área de tecnología) y
@@ -22,6 +22,7 @@ const ZONAS = [
     descripcion: 'Activos, personas y cuentas de la operación',
     modulos: [
       { tab: 'inventario', titulo: 'Inventario', detalle: 'Equipos y accesorios',           Icono: ClipboardList },
+      { tab: 'bajas',      titulo: 'Bajas',      detalle: 'Equipos y accesorios dañados',   Icono: Ban },
       { tab: 'agentes',    titulo: 'Agentes',    detalle: 'Personal y asignaciones',        Icono: Armchair },
       { tab: null,         titulo: 'Correos',    detalle: 'Cuentas de correo corporativas', Icono: Mail, ancho: true },
     ],

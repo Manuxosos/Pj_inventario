@@ -20,7 +20,10 @@ const FIELDS = [
   { key: 'team', label: 'Responsable IT', group: 'general' },
   { key: 'responsable', label: 'Agente', group: 'general' },
   { key: 'estado', label: 'Estado', group: 'general', type: 'select',
-    options: ['En uso', 'Disponible', 'En revisión', 'De baja'] },
+    // "De baja" se maneja aparte desde el botón "Dar de baja" (pestaña
+    // Bajas), no como un estado más: un equipo dado de baja se retira del
+    // inventario en vez de quedar listado con ese estado.
+    options: ['En uso', 'Disponible', 'En revisión'] },
   { key: 'marca_modelo', label: 'Marca / Modelo', group: 'specs' },
   { key: 'procesador', label: 'Procesador', group: 'specs' },
   { key: 'ram', label: 'RAM', group: 'specs' },

@@ -274,6 +274,49 @@ async function initSchema() {
   await pool.query(`ALTER TABLE gastos DROP CONSTRAINT IF EXISTS gastos_categoria_check`);
   await pool.query(`ALTER TABLE gastos ADD CONSTRAINT gastos_categoria_check CHECK (categoria IN ('internet','software','hardware','accesorios','mantenimiento','otro'))`);
 
+  // Bajas: equipos o accesorios dañados sin opción de reparación. Reemplaza
+  // al viejo estado "De baja" de equipos (que ya no se puede elegir desde la
+  // UI) — un equipo dado de baja queda registrado acá y se retira del
+  // inventario activo (eliminado_en), separado de la Papelera (que es para
+  // borrados por error, no para bajas definitivas). También sirve para
+  // registrar algo encontrado dañado que nunca estuvo cargado en el sistema
+  // (equipo_id queda NULL en ese caso).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bajas (
+      id             SERIAL PRIMARY KEY,
+      edificio_id    INTEGER NOT NULL REFERENCES edificios(id),
+      fecha          DATE NOT NULL,
+      categoria      TEXT NOT NULL DEFAULT 'otro',
+      descripcion    TEXT NOT NULL,
+      numero_serie   TEXT NOT NULL DEFAULT '',
+      cantidad       INTEGER NOT NULL DEFAULT 1 CHECK (cantidad > 0),
+      motivo         TEXT NOT NULL DEFAULT '',
+      equipo_id      INTEGER REFERENCES equipos(id),
+      usuario_id     INTEGER,
+      usuario_nombre TEXT NOT NULL DEFAULT '',
+      created_at     TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  await pool.query(`ALTER TABLE bajas DROP CONSTRAINT IF EXISTS bajas_categoria_check`);
+  await pool.query(`ALTER TABLE bajas ADD CONSTRAINT bajas_categoria_check CHECK (categoria IN ('laptop','audifonos','monitores','celulares','otro'))`);
+
+  // Migración única: equipos que ya estaban en estado "De baja" pasan a ser
+  // un registro de Bajas y se retiran del inventario activo. Es idempotente
+  // porque una vez migrado el equipo queda con eliminado_en != NULL, así que
+  // no vuelve a aparecer en este SELECT en el próximo arranque.
+  const { rows: equiposDeBaja } = await pool.query(
+    `SELECT id, edificio_id, marca_modelo, numero_serie, updated_at FROM equipos WHERE estado = 'De baja' AND eliminado_en IS NULL AND edificio_id IS NOT NULL`
+  );
+  for (const eq of equiposDeBaja) {
+    await pool.query(
+      `INSERT INTO bajas (edificio_id, fecha, categoria, descripcion, numero_serie, cantidad, motivo, equipo_id, usuario_nombre)
+       VALUES ($1,$2,'laptop',$3,$4,1,'Migrado automáticamente desde el estado "De baja" de Inventario.',$5,'Sistema')`,
+      [eq.edificio_id, (eq.updated_at || new Date()).toISOString().slice(0, 10), eq.marca_modelo || 'Equipo sin modelo', eq.numero_serie || '', eq.id]
+    );
+    await pool.query('UPDATE equipos SET eliminado_en = NOW() WHERE id = $1', [eq.id]);
+  }
+  if (equiposDeBaja.length > 0) console.log(`Migrados ${equiposDeBaja.length} equipo(s) desde el estado "De baja" a la sección Bajas.`);
+
   // Crear admin por defecto si no hay usuarios
   const { rows } = await pool.query('SELECT COUNT(*) n FROM usuarios');
   if (parseInt(rows[0].n) === 0) {
